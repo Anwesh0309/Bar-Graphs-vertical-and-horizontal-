@@ -1,0 +1,17 @@
+:root {
+  --gq-bg-gradient-start: #1a1030;
+  --gq-bg-gradient-end:   #2b1b4e;
+  --gq-panel-bg:          rgba(255,255,255,0.06);
+  --gq-panel-border:      rgba(255,255,255,0.10);
+  --gq-accent-gold:       #F5A623;
+  --gq-accent-gold-light: #FFC94A;
+  --gq-accent-pink:       #E85D8C;
+  --gq-accent-green:      #4ADE80;
+  --gq-accent-blue:       #60A5FA;
+  --gq-text-primary:      #FFFFFF;
+  --gq-text-secondary:    #C9C3E0;
+  --gq-radius-lg:         20px;
+  --gq-radius-md:         14px;
+  --gq-font-heading:      'Baloo 2', sans-serif;
+  --gq-font-body:         'Poppins', sans-serif;
+}

@@ -1,0 +1,211 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--gq-font-body);
+  background: linear-gradient(135deg, var(--gq-bg-gradient-start) 0%, var(--gq-bg-gradient-end) 100%);
+  color: var(--gq-text-primary);
+  min-height: 100vh;
+}
+
+/* No-scroll single-frame layout */
+.page-frame {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-area {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Glassmorphism panel */
+.glass-panel {
+  background: var(--gq-panel-bg);
+  border: 1px solid var(--gq-panel-border);
+  border-radius: var(--gq-radius-lg);
+  backdrop-filter: blur(12px);
+}
+
+/* Gold button */
+.btn-gold {
+  background: linear-gradient(135deg, var(--gq-accent-gold) 0%, var(--gq-accent-gold-light) 100%);
+  color: #1a1030;
+  font-family: var(--gq-font-heading);
+  font-weight: 800;
+  font-size: 1.1rem;
+  padding: 0.75rem 2rem;
+  border-radius: 50px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(245,166,35,0.4);
+  transition: all 0.2s ease;
+  letter-spacing: 0.02em;
+}
+
+.btn-gold:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(245,166,35,0.6);
+}
+
+.btn-gold:active {
+  transform: translateY(0);
+}
+
+/* Answer option buttons */
+.answer-btn {
+  background: rgba(255,255,255,0.08);
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: var(--gq-radius-md);
+  color: white;
+  font-family: var(--gq-font-heading);
+  font-weight: 700;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+}
+
+.answer-btn:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: var(--gq-accent-gold);
+  transform: scale(1.02);
+}
+
+.answer-btn.correct {
+  background: rgba(74,222,128,0.3);
+  border-color: var(--gq-accent-green);
+  animation: correctFlash 0.5s ease;
+}
+
+.answer-btn.incorrect {
+  background: rgba(232,93,140,0.3);
+  border-color: var(--gq-accent-pink);
+  animation: incorrectShake 0.4s ease;
+}
+
+@keyframes correctFlash {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes incorrectShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+/* Stars */
+.star-filled { color: var(--gq-accent-gold); }
+.star-empty { color: rgba(255,255,255,0.2); }
+
+/* Scrollbar hide utility */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Phase stepper gold ring */
+.stepper-active {
+  border: 3px solid var(--gq-accent-gold);
+  color: var(--gq-accent-gold);
+  background: rgba(245,166,35,0.15);
+}
+
+.stepper-done {
+  background: var(--gq-accent-green);
+  border: 3px solid var(--gq-accent-green);
+  color: #1a1030;
+}
+
+.stepper-locked {
+  background: rgba(255,255,255,0.08);
+  border: 3px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.3);
+}
+
+/* Floating speaker button */
+.speaker-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1000;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+  font-size: 1.2rem;
+}
+
+.speaker-btn:hover {
+  background: rgba(255,255,255,0.2);
+  transform: scale(1.1);
+}
+
+/* Feedback popup overlay */
+.feedback-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  pointer-events: none;
+}
+
+.feedback-popup-inner {
+  border-radius: var(--gq-radius-lg);
+  padding: 1.5rem 2.5rem;
+  text-align: center;
+  font-family: var(--gq-font-heading);
+  font-weight: 800;
+  font-size: 1.4rem;
+  animation: popIn 0.3s ease;
+  pointer-events: none;
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.7); opacity: 0; }
+  80% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Bar grow animation */
+@keyframes barGrow {
+  from { transform: scaleY(0); transform-origin: bottom; }
+  to { transform: scaleY(1); transform-origin: bottom; }
+}
+
+@keyframes barGrowH {
+  from { transform: scaleX(0); transform-origin: left; }
+  to { transform: scaleX(1); transform-origin: left; }
+}
