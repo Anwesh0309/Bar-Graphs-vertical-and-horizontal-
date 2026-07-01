@@ -51,16 +51,16 @@ export default function QuestionCard({ question, onAnswer, questionNum, total })
       <div style={{
         background: 'rgba(255,255,255,0.07)',
         borderRadius: '14px',
-        padding: '10px 14px',
+        padding: '12px 16px',
         fontFamily: '"Baloo 2"',
-        fontWeight: 700,
-        fontSize: '1rem',
+        fontWeight: 800,
+        fontSize: 'clamp(1rem,2.4vw,1.2rem)',
         color: 'white',
-        lineHeight: 1.4,
+        lineHeight: 1.5,
         textAlign: 'center',
         flexShrink: 0,
       }}>
-        <span style={{ color: '#FFC94A', marginRight: '6px' }}>Q{questionNum}.</span>
+        <span style={{ color: '#FFC94A', marginRight: '6px', fontWeight: 900 }}>Q{questionNum}.</span>
         {stem}
       </div>
 

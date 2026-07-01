@@ -28,7 +28,7 @@ export default function Wonder() {
 
   return (
     <div className="page-frame">
-      <PhaseStepper active="wonder" />
+      <PhaseStepper active="wonder" showHome={false} />
       <div className="content-area" style={{
         alignItems:'center', justifyContent:'center',
         padding:'12px 16px', gap:'14px',
@@ -47,37 +47,37 @@ export default function Wonder() {
             background:'rgba(255,255,255,0.07)',
             border:'2px solid rgba(245,166,35,0.4)',
             borderRadius:'20px',
-            padding:'20px 24px',
-            maxWidth:560, width:'100%',
+            padding:'22px 28px',
+            maxWidth:580, width:'100%',
             textAlign:'center',
-            boxShadow:'0 0 30px rgba(245,166,35,0.15)',
+            boxShadow:'0 0 30px rgba(245,166,35,0.18)',
           }}
         >
           <div style={{
-            fontFamily:'"Baloo 2"', fontWeight:800,
-            fontSize:'clamp(1rem,2.5vw,1.25rem)',
-            color:'white', lineHeight:1.5,
+            fontFamily:'"Baloo 2"', fontWeight:900,
+            fontSize:'clamp(1.05rem,2.8vw,1.35rem)',
+            color:'#ffffff', lineHeight:1.55,
             marginBottom:'14px',
           }}>
             {prompt.question}
           </div>
 
           <div style={{
-            fontFamily:'"Poppins"', fontStyle:'italic',
-            fontSize:'clamp(0.85rem,1.8vw,1rem)',
-            color:'rgba(255,255,255,0.65)',
+            fontFamily:'"Poppins"', fontStyle:'italic', fontWeight:600,
+            fontSize:'clamp(0.9rem,2vw,1.05rem)',
+            color:'rgba(255,255,255,0.72)',
             marginBottom:'14px',
-            lineHeight:1.4,
+            lineHeight:1.45,
           }}>
             {prompt.followUp}
           </div>
 
           <div style={{
-            background:'linear-gradient(135deg,rgba(245,166,35,0.2),rgba(255,201,74,0.15))',
-            border:'1px solid rgba(245,166,35,0.4)',
-            borderRadius:'50px', padding:'8px 20px',
-            fontFamily:'"Baloo 2"', fontWeight:800,
-            fontSize:'clamp(0.85rem,1.8vw,1rem)',
+            background:'linear-gradient(135deg,rgba(245,166,35,0.22),rgba(255,201,74,0.15))',
+            border:'1.5px solid rgba(245,166,35,0.5)',
+            borderRadius:'50px', padding:'9px 22px',
+            fontFamily:'"Baloo 2"', fontWeight:900,
+            fontSize:'clamp(0.9rem,2vw,1.05rem)',
             color:'#FFC94A',
             display:'inline-block',
           }}>

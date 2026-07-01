@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { useProgress } from '../context/ProgressContext'
 
 const PHASES = [
-  { key: 'wonder',   label: 'Wonder',   icon: '🔎', route: '/wonder' },
-  { key: 'story',    label: 'Story',    icon: '📖', route: '/story' },
-  { key: 'simulate', label: 'Simulate', icon: '✏️', route: '/simulate' },
-  { key: 'play',     label: 'Play',     icon: '🎮', route: '/play' },
-  { key: 'reflect',  label: 'Reflect',  icon: '📋', route: '/reflect' },
+  { key: 'wonder',   label: 'Wonder',   num: '01', icon: '🔮', route: '/wonder' },
+  { key: 'story',    label: 'Story',    num: '02', icon: '📖', route: '/story' },
+  { key: 'simulate', label: 'Simulate', num: '03', icon: '✏️', route: '/simulate' },
+  { key: 'play',     label: 'Play',     num: '04', icon: '🎮', route: '/play' },
+  { key: 'reflect',  label: 'Reflect',  num: '05', icon: '📋', route: '/reflect' },
 ]
 
-export default function PhaseStepper({ active }) {
+export default function PhaseStepper({ active, showHome = true }) {
   const navigate = useNavigate()
   const { state } = useProgress()
   const completed = state.completedPhases || []
@@ -20,81 +20,114 @@ export default function PhaseStepper({ active }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '10px 16px 6px',
+      padding: '8px 12px 6px',
       gap: '0',
-      background: 'rgba(0,0,0,0.3)',
-      borderBottom: '1px solid rgba(255,255,255,0.08)',
+      background: 'rgba(0,0,0,0.45)',
+      borderBottom: '1px solid rgba(255,255,255,0.1)',
       flexShrink: 0,
+      position: 'relative',
+      minHeight: 52,
     }}>
-      {PHASES.map((phase, i) => {
-        const isDone = completed.includes(phase.key)
-        const isActive = phase.key === active
-        const isLocked = !isDone && !isActive
+      {/* Home button — shown on all phases except Home itself */}
+      {showHome && (
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            position: 'absolute',
+            left: 10,
+            display: 'flex', alignItems: 'center', gap: '5px',
+            background: 'rgba(245,166,35,0.18)',
+            border: '1.5px solid rgba(245,166,35,0.5)',
+            borderRadius: '20px',
+            padding: '5px 13px',
+            fontFamily: '"Baloo 2", sans-serif',
+            fontWeight: 800, fontSize: '0.82rem',
+            color: '#FFC94A',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            whiteSpace: 'nowrap',
+          }}
+          aria-label="Go to Home"
+        >
+          🏠 <span>Home</span>
+        </button>
+      )}
 
-        return (
-          <React.Fragment key={phase.key}>
-            <button
-              onClick={() => { if (!isLocked) navigate(phase.route) }}
-              disabled={isLocked}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '2px',
-                background: 'none',
-                border: 'none',
-                cursor: isLocked ? 'not-allowed' : 'pointer',
-                padding: '4px 8px',
-                opacity: isLocked ? 0.4 : 1,
-              }}
-              aria-label={`Phase ${i+1}: ${phase.label}${isDone?' (completed)':isActive?' (active)':' (locked)'}`}
-            >
-              <div style={{
-                width: 34, height: 34,
-                borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: '"Baloo 2", sans-serif',
-                fontWeight: 800,
-                fontSize: '0.75rem',
-                transition: 'all 0.2s',
-                ...(isDone ? {
-                  background: '#4ADE80',
-                  border: '2px solid #4ADE80',
-                  color: '#1a1030',
-                  fontSize: '1rem'
-                } : isActive ? {
-                  background: 'rgba(245,166,35,0.2)',
-                  border: '2.5px solid #F5A623',
-                  color: '#F5A623',
-                } : {
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '2px solid rgba(255,255,255,0.15)',
-                  color: 'rgba(255,255,255,0.4)',
-                })
-              }}>
-                {isDone ? '✓' : isActive ? phase.icon : (i + 1)}
-              </div>
-              <span style={{
-                fontSize: '0.6rem',
-                fontFamily: '"Baloo 2", sans-serif',
-                fontWeight: isActive ? 800 : 600,
-                color: isActive ? '#F5A623' : isDone ? '#4ADE80' : 'rgba(255,255,255,0.4)',
-                letterSpacing: '0.03em',
-              }}>
-                {phase.label}
-              </span>
-            </button>
-            {i < PHASES.length - 1 && (
-              <div style={{
-                width: 24, height: 2,
-                background: isDone ? '#4ADE80' : 'rgba(255,255,255,0.12)',
-                borderRadius: 2,
-                flexShrink: 0,
-              }} />
-            )}
-          </React.Fragment>
-        )
-      })}
+      {/* Phase steps — matching screenshot exactly */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+        {PHASES.map((phase, i) => {
+          const isDone = completed.includes(phase.key)
+          const isActive = phase.key === active
+          const isLocked = !isDone && !isActive
+
+          return (
+            <React.Fragment key={phase.key}>
+              <button
+                onClick={() => { if (!isLocked) navigate(phase.route) }}
+                disabled={isLocked}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  background: isActive
+                    ? 'rgba(245,166,35,0.22)'
+                    : isDone ? 'rgba(74,222,128,0.1)' : 'transparent',
+                  border: isActive
+                    ? '1.5px solid rgba(245,166,35,0.6)'
+                    : isDone ? '1.5px solid rgba(74,222,128,0.4)' : 'none',
+                  borderRadius: '20px',
+                  padding: '4px 10px',
+                  cursor: isLocked ? 'default' : 'pointer',
+                  opacity: isLocked ? 0.38 : 1,
+                  transition: 'all 0.2s',
+                }}
+                aria-label={`Phase ${phase.num}: ${phase.label}`}
+              >
+                {/* Number badge */}
+                <span style={{
+                  fontFamily: '"Baloo 2", sans-serif',
+                  fontWeight: 800,
+                  fontSize: '0.72rem',
+                  color: isActive ? '#F5A623' : isDone ? '#4ADE80' : 'rgba(255,255,255,0.35)',
+                  letterSpacing: '0.03em',
+                }}>{phase.num}</span>
+
+                {/* Icon */}
+                <span style={{
+                  fontSize: '0.85rem',
+                  filter: isLocked ? 'grayscale(1) opacity(0.4)' : 'none',
+                }}>{phase.icon}</span>
+
+                {/* Label */}
+                <span style={{
+                  fontFamily: '"Baloo 2", sans-serif',
+                  fontWeight: isActive ? 800 : 700,
+                  fontSize: '0.78rem',
+                  color: isActive ? '#F5A623' : isDone ? '#4ADE80' : 'rgba(255,255,255,0.45)',
+                }}>{phase.label}</span>
+
+                {/* Done checkmark */}
+                {isDone && (
+                  <span style={{
+                    fontSize: '0.7rem', color: '#4ADE80', fontWeight: 900,
+                  }}>✓</span>
+                )}
+              </button>
+
+              {/* Connector dot */}
+              {i < PHASES.length - 1 && (
+                <div style={{
+                  width: 12, height: 2,
+                  background: isDone ? 'rgba(74,222,128,0.5)' : 'rgba(255,255,255,0.1)',
+                  borderRadius: 2,
+                  flexShrink: 0,
+                  margin: '0 1px',
+                }} />
+              )}
+            </React.Fragment>
+          )
+        })}
+      </div>
     </div>
   )
 }

@@ -112,6 +112,9 @@ export default function Play() {
     navigate('/reflect')
   }
 
+  // Results button only shows after all 10 worlds are played
+  const allWorldsPlayed = worlds.every(w => !!state.worldStats?.[w.id])
+
   // ── Worlds grid ──
   if (view === 'worlds') {
     return (
@@ -124,12 +127,12 @@ export default function Play() {
         }}>
           <div style={{ textAlign: 'center', flexShrink: 0 }}>
             <h2 style={{
-              fontFamily: '"Baloo 2"', fontWeight: 800,
-              fontSize: 'clamp(1.1rem,3vw,1.4rem)', color: 'white', margin: '0 0 2px',
+              fontFamily: '"Baloo 2"', fontWeight: 900,
+              fontSize: 'clamp(1.2rem,3vw,1.6rem)', color: 'white', margin: '0 0 3px',
             }}>🎮 Play — Choose Your World!</h2>
             <p style={{
-              fontFamily: '"Poppins"', fontSize: '0.78rem',
-              color: 'rgba(255,255,255,0.55)', margin: 0,
+              fontFamily: '"Baloo 2"', fontWeight: 700, fontSize: 'clamp(0.85rem,2vw,1rem)',
+              color: 'rgba(255,255,255,0.6)', margin: 0,
             }}>Answer questions in each world. Earn stars and XP! ⭐</p>
           </div>
 
@@ -137,7 +140,7 @@ export default function Play() {
             display: 'grid',
             gridTemplateColumns: 'repeat(5, 1fr)',
             gap: '8px',
-            width: '100%', maxWidth: 580,
+            width: '100%', maxWidth: 600,
             flexShrink: 0,
           }}>
             {worlds.map(world => {
@@ -160,25 +163,37 @@ export default function Play() {
             flexWrap: 'wrap', justifyContent: 'center',
           }}>
             <div style={{
-              display: 'flex', gap: '12px',
-              fontFamily: '"Baloo 2"', fontSize: '0.85rem', fontWeight: 700,
-              color: 'rgba(255,255,255,0.7)',
+              display: 'flex', gap: '14px',
+              fontFamily: '"Baloo 2"', fontSize: 'clamp(0.9rem,2vw,1rem)', fontWeight: 800,
+              color: 'rgba(255,255,255,0.8)',
             }}>
               <span>⭐ {state.xp} XP</span>
               <span>🔥 Best: {state.maxStreak}</span>
             </div>
-            <button
-              onClick={handleToReflect}
-              style={{
-                background: 'rgba(255,255,255,0.08)',
-                border: '2px solid rgba(255,255,255,0.15)',
-                borderRadius: '50px', padding: '7px 18px',
-                fontFamily: '"Baloo 2"', fontWeight: 700, fontSize: '0.85rem',
-                color: 'white', cursor: 'pointer',
-              }}
-            >
-              📋 View Results →
-            </button>
+            {/* Results button ONLY after all 10 worlds completed */}
+            {allWorldsPlayed && (
+              <motion.button
+                initial={{ scale: 0 }} animate={{ scale: 1 }}
+                whileHover={{ scale: 1.05 }}
+                onClick={handleToReflect}
+                style={{
+                  background: 'linear-gradient(135deg,#F5A623,#FFC94A)',
+                  border: 'none', borderRadius: 50, padding: '10px 24px',
+                  fontFamily: '"Baloo 2"', fontWeight: 900,
+                  fontSize: 'clamp(0.9rem,2vw,1rem)', color: '#1a1030',
+                  cursor: 'pointer', boxShadow: '0 4px 18px rgba(245,166,35,0.5)',
+                }}
+              >📋 See Results! 🏆</motion.button>
+            )}
+            {!allWorldsPlayed && (
+              <div style={{
+                fontFamily: '"Baloo 2"', fontWeight: 700,
+                fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)',
+                textAlign: 'center',
+              }}>
+                Complete all 10 worlds to unlock Results
+              </div>
+            )}
           </div>
         </div>
       </div>
