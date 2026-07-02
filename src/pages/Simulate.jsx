@@ -256,36 +256,45 @@ function StationB({ onComplete }) {
   const [results, setResults] = useState([null,null,null])
   const [showExp, setShowExp] = useState(false)
   const { speak, stopAll } = useAudio()
-  const allDone = results.every(r=>r===true)
+  // completed = all questions have been attempted (right OR wrong)
+  const allAttempted = results.every(r => r !== null)
+  const allCorrect = results.every(r => r === true)
   const q = SCALE_Qs[qIdx]
   const scale = SCALE_OPTIONS[scaleIdx]
   const data = DS[q.dsIdx]
 
-  React.useEffect(()=>{ if(allDone) onComplete() },[allDone])
+  React.useEffect(() => {
+    if (allAttempted) onComplete()
+  }, [allAttempted])
 
-  const advance = () => {
+  const advance = (updatedResults) => {
     setShowExp(false)
-    if(qIdx < SCALE_Qs.length-1){ setQIdx(qIdx+1); setInp(''); setScaleIdx(0) }
+    const nextIdx = qIdx + 1
+    if (nextIdx < SCALE_Qs.length) {
+      setQIdx(nextIdx); setInp(''); setScaleIdx(0)
+    }
+    // onComplete fires via the useEffect above when allAttempted
   }
 
   const handleCheck = () => {
-    if (results[qIdx]===true || showExp) return
+    if (results[qIdx] !== null || showExp) return
     const ok = inp.trim().toLowerCase() === q.ans.toLowerCase()
-    const nr=[...results]; nr[qIdx]=ok; setResults(nr)
-    if(ok){
-      setTimeout(()=>advance(), 900)
+    const nr = [...results]; nr[qIdx] = ok; setResults(nr)
+    if (ok) {
+      setTimeout(() => advance(nr), 900)
     } else {
-      // wrong: show explanation, play audio, auto-advance after 2.5s
       setShowExp(true)
-      speak([`/assets/audio/sim_exp_scale_q${qIdx+1}.mp3`])
-      setTimeout(()=>advance(), 2500)
+      speak([`/assets/audio/sim_exp_scale_q${qIdx + 1}.mp3`])
+      setTimeout(() => advance(nr), 2500)
     }
   }
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:8,width:'100%',alignItems:'center'}}>
       <div style={{display:'flex',gap:7,justifyContent:'center'}}>
-        {SCALE_Qs.map((_,i)=>(<div key={i} style={S.badge(results[i]===true,i===qIdx)}>{results[i]===true?'✓':i+1}</div>))}
+        {SCALE_Qs.map((_,i)=>(<div key={i} style={S.badge(results[i]!==null, i===qIdx)}>
+        {results[i]===true ? '✓' : results[i]===false ? '~' : i+1}
+      </div>))}
       </div>
       <div style={S.qBox('rgba(96,165,250,0.12)','rgba(96,165,250,0.4)')}>{q.q}</div>
       {/* Scale selector */}
@@ -320,7 +329,7 @@ function StationB({ onComplete }) {
           <div style={{fontSize:'0.75rem',color:'rgba(255,255,255,0.5)',marginTop:4,fontWeight:600}}>Moving to next question…</div>
         </motion.div>
       )}
-      {!showExp && results[qIdx]!==true && (
+      {!showExp && results[qIdx] === null && (
         <div style={{display:'flex',gap:8,width:'100%',maxWidth:320}}>
           <input value={inp} onChange={e=>setInp(e.target.value)}
             onKeyDown={e=>e.key==='Enter'&&handleCheck()}
@@ -328,7 +337,11 @@ function StationB({ onComplete }) {
           <button onClick={handleCheck} style={S.checkBtn}>Check ✓</button>
         </div>
       )}
-      {allDone && <div style={{fontFamily:'"Baloo 2"',fontWeight:900,color:'#4ADE80',fontSize:'1.05rem',textAlign:'center'}}>🎉 Scale Slider mastered!</div>}
+      {allAttempted && (
+        <div style={{fontFamily:'"Baloo 2"',fontWeight:900,color:'#4ADE80',fontSize:'1.05rem',textAlign:'center'}}>
+          {allCorrect ? '🎉 Scale Slider mastered!' : '✅ Station B complete! Moving on…'}
+        </div>
+      )}
     </div>
   )
 }
@@ -356,34 +369,42 @@ function StationC({ onComplete }) {
   const [results, setResults] = useState([null,null,null])
   const [showExp, setShowExp] = useState(false)
   const { speak } = useAudio()
-  const allDone = results.every(r=>r===true)
+  const allAttempted = results.every(r => r !== null)
+  const allCorrect = results.every(r => r === true)
   const q = ORIENT_Qs[qIdx]
   const data = DS[q.dsIdx]
 
-  React.useEffect(()=>{ if(allDone) onComplete() },[allDone])
+  React.useEffect(() => {
+    if (allAttempted) onComplete()
+  }, [allAttempted])
 
-  const advance = () => {
+  const advance = (updatedResults) => {
     setShowExp(false)
-    if(qIdx < ORIENT_Qs.length-1){ setQIdx(qIdx+1); setInp(''); setOrient('vertical') }
+    const nextIdx = qIdx + 1
+    if (nextIdx < ORIENT_Qs.length) {
+      setQIdx(nextIdx); setInp(''); setOrient('vertical')
+    }
   }
 
   const handleCheck = () => {
-    if (results[qIdx]===true || showExp) return
+    if (results[qIdx] !== null || showExp) return
     const ok = inp.trim().toLowerCase() === q.ans.toLowerCase()
-    const nr=[...results]; nr[qIdx]=ok; setResults(nr)
-    if(ok){
-      setTimeout(()=>advance(), 900)
+    const nr = [...results]; nr[qIdx] = ok; setResults(nr)
+    if (ok) {
+      setTimeout(() => advance(nr), 900)
     } else {
       setShowExp(true)
-      speak([`/assets/audio/sim_exp_orient_q${qIdx+1}.mp3`])
-      setTimeout(()=>advance(), 2500)
+      speak([`/assets/audio/sim_exp_orient_q${qIdx + 1}.mp3`])
+      setTimeout(() => advance(nr), 2500)
     }
   }
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:8,width:'100%',alignItems:'center'}}>
       <div style={{display:'flex',gap:7,justifyContent:'center'}}>
-        {ORIENT_Qs.map((_,i)=>(<div key={i} style={S.badge(results[i]===true,i===qIdx)}>{results[i]===true?'✓':i+1}</div>))}
+        {ORIENT_Qs.map((_,i)=>(<div key={i} style={S.badge(results[i]!==null, i===qIdx)}>
+        {results[i]===true ? '✓' : results[i]===false ? '~' : i+1}
+      </div>))}
       </div>
       <div style={S.qBox('rgba(168,85,247,0.12)','rgba(168,85,247,0.4)')}>{q.q}</div>
       {/* Toggle */}
@@ -416,7 +437,7 @@ function StationC({ onComplete }) {
           <div style={{fontSize:'0.75rem',color:'rgba(255,255,255,0.5)',marginTop:4,fontWeight:600}}>Moving to next question…</div>
         </motion.div>
       )}
-      {!showExp && results[qIdx]!==true && (
+      {!showExp && results[qIdx] === null && (
         <div style={{display:'flex',gap:8,width:'100%',maxWidth:320}}>
           <input value={inp} onChange={e=>setInp(e.target.value)}
             onKeyDown={e=>e.key==='Enter'&&handleCheck()}
@@ -424,7 +445,11 @@ function StationC({ onComplete }) {
           <button onClick={handleCheck} style={S.checkBtn}>Check ✓</button>
         </div>
       )}
-      {allDone && <div style={{fontFamily:'"Baloo 2"',fontWeight:900,color:'#4ADE80',fontSize:'1.05rem',textAlign:'center'}}>🎉 Orientation Flip mastered!</div>}
+      {allAttempted && (
+        <div style={{fontFamily:'"Baloo 2"',fontWeight:900,color:'#4ADE80',fontSize:'1.05rem',textAlign:'center'}}>
+          {allCorrect ? '🎉 Orientation Flip mastered!' : '✅ Station C complete! Moving on…'}
+        </div>
+      )}
     </div>
   )
 }
@@ -449,7 +474,9 @@ function StationD({ onComplete }) {
   const [qIdx, setQIdx] = useState(0)
   const [sel, setSel] = useState(null)
   const [rev, setRev] = useState(false)
+  const [wrongTaps, setWrongTaps] = useState(0)
   const [done, setDone] = useState([false,false,false])
+  // Station D completes when all scenarios have been revealed (right or revealed via wrong taps)
   const allDone = done.every(Boolean)
   const sc = ERR[qIdx]
   const cats = sc.bad
@@ -458,15 +485,31 @@ function StationD({ onComplete }) {
 
   React.useEffect(()=>{ if(allDone) onComplete() },[allDone])
 
+  const advanceD = () => {
+    const nd=[...done]; nd[qIdx]=true
+    setDone(nd)
+    setTimeout(()=>{
+      if(qIdx<ERR.length-1){
+        setQIdx(qIdx+1); setSel(null); setRev(false); setWrongTaps(0)
+      }
+      // allDone fires via useEffect
+    },1800)
+  }
+
   const handleClick = (idx) => {
     if (rev) return
     setSel(idx)
     if (idx===sc.ei) {
       setRev(true)
-      const nd=[...done]; nd[qIdx]=true; setDone(nd)
-      setTimeout(()=>{
-        if(qIdx<ERR.length-1){setQIdx(qIdx+1);setSel(null);setRev(false)}
-      },2000)
+      advanceD()
+    } else {
+      const newWrong = wrongTaps + 1
+      setWrongTaps(newWrong)
+      // After 3 wrong taps, reveal the answer and advance anyway
+      if (newWrong >= 3) {
+        setRev(true)
+        advanceD()
+      }
     }
   }
 
@@ -503,6 +546,11 @@ function StationD({ onComplete }) {
         <div style={{fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.88rem',
           color:'rgba(255,255,255,0.6)',textAlign:'center'}}>
           That bar looks okay — keep looking! 🔍
+          {wrongTaps >= 2 && (
+            <span style={{display:'block',fontSize:'0.78rem',color:'#FFC94A',marginTop:3}}>
+              💡 Hint: look for the bar that doesn't match the correct value!
+            </span>
+          )}
         </div>
       )}
       {rev && (
