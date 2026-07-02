@@ -28,7 +28,7 @@ export default function Wonder() {
 
   return (
     <div className="page-frame">
-      <PhaseStepper active="wonder" showHome={false} />
+      <PhaseStepper active="wonder" />
       <div className="content-area" style={{
         alignItems:'center', justifyContent:'center',
         padding:'12px 16px', gap:'14px',

@@ -23,7 +23,7 @@ export default function PhaseStepper({ active, showHome = true }) {
       padding: '7px 12px 5px',
       gap: '0',
       background: 'transparent',
-      borderBottom: '1px solid rgba(255,255,255,0.08)',
+      borderBottom: 'none',
       flexShrink: 0,
       position: 'relative',
       minHeight: 48,

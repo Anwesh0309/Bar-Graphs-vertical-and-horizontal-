@@ -235,9 +235,18 @@ function StationA({ onComplete }) {
 /* ─── Station B — Scale Slider ────────────────────────────────────────────── */
 const SCALE_OPTIONS = [1,2,5,10]
 const SCALE_Qs = [
-  { q:'📏 Q1: Move the slider to Scale = 2. How many units does the DOGS bar show?', ans:'9', hint:'The data never changes — Dogs = 9 at any scale!', dsIdx:0 },
-  { q:'📏 Q2: Set Scale to 5. How many gridlines does the GREEN bar (value=10) cross?', ans:'2', hint:'Gridlines at 0, 5, 10 → Green bar crosses 2 gridlines.', dsIdx:1 },
-  { q:'📏 Q3: Set Scale to 1. Which day bar is the TALLEST, and what is its value? (write e.g. Wed, 9)', ans:'wed, 9', hint:'At scale=1 every unit is visible — find the tallest bar!', dsIdx:2 },
+  { q:'📏 Q1: Move the slider to Scale = 2. How many units does the DOGS bar show?',
+    ans:'9', hint:'The data never changes — Dogs = 9 at any scale!',
+    exp:'The answer is 9. No matter what scale you choose, the Dogs bar always represents 9 units — the scale only changes the gridlines, not the data!',
+    dsIdx:0 },
+  { q:'📏 Q2: Set Scale to 5. How many gridlines does the GREEN bar (value=10) cross?',
+    ans:'2', hint:'Gridlines at 0, 5, 10 → Green bar crosses 2 gridlines.',
+    exp:'The answer is 2. At scale 5, gridlines appear at 0, 5, and 10. The Green bar with value 10 crosses exactly 2 gridlines!',
+    dsIdx:1 },
+  { q:'📏 Q3: Set Scale to 1. Which day bar is the TALLEST, and what is its value? (write e.g. Wed, 9)',
+    ans:'wed, 9', hint:'At scale=1 every unit is visible — find the tallest bar!',
+    exp:'The answer is Wed, 9. Wednesday has the tallest bar, reaching the value 9 on the scale!',
+    dsIdx:2 },
 ]
 
 function StationB({ onComplete }) {
@@ -245,6 +254,8 @@ function StationB({ onComplete }) {
   const [scaleIdx, setScaleIdx] = useState(0)
   const [inp, setInp] = useState('')
   const [results, setResults] = useState([null,null,null])
+  const [showExp, setShowExp] = useState(false)
+  const { speak, stopAll } = useAudio()
   const allDone = results.every(r=>r===true)
   const q = SCALE_Qs[qIdx]
   const scale = SCALE_OPTIONS[scaleIdx]
@@ -252,11 +263,23 @@ function StationB({ onComplete }) {
 
   React.useEffect(()=>{ if(allDone) onComplete() },[allDone])
 
+  const advance = () => {
+    setShowExp(false)
+    if(qIdx < SCALE_Qs.length-1){ setQIdx(qIdx+1); setInp(''); setScaleIdx(0) }
+  }
+
   const handleCheck = () => {
-    if (results[qIdx]===true) return
+    if (results[qIdx]===true || showExp) return
     const ok = inp.trim().toLowerCase() === q.ans.toLowerCase()
     const nr=[...results]; nr[qIdx]=ok; setResults(nr)
-    if(ok) setTimeout(()=>{ if(qIdx<SCALE_Qs.length-1){setQIdx(qIdx+1);setInp('');setScaleIdx(0)} }, 900)
+    if(ok){
+      setTimeout(()=>advance(), 900)
+    } else {
+      // wrong: show explanation, play audio, auto-advance after 2.5s
+      setShowExp(true)
+      speak([`/assets/audio/sim_exp_scale_q${qIdx+1}.mp3`])
+      setTimeout(()=>advance(), 2500)
+    }
   }
 
   return (
@@ -286,12 +309,18 @@ function StationB({ onComplete }) {
         borderRadius:10,padding:'5px 16px',textAlign:'center'}}>
         Scale = <strong style={{fontSize:'1.05rem'}}>{scale}</strong> — each gridline = <strong>{scale}</strong> unit{scale>1?'s':''}
       </div>
-      {results[qIdx]===false && (
-        <div style={{fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.88rem',color:'#E85D8C',textAlign:'center'}}>
-          Not quite! 💡 Hint: {q.hint}
-        </div>
+      {/* Explanation banner for wrong answer */}
+      {showExp && (
+        <motion.div initial={{opacity:0,y:4}} animate={{opacity:1,y:0}} style={{
+          background:'linear-gradient(135deg,rgba(232,93,140,0.18),rgba(190,24,93,0.12))',
+          border:'2px solid rgba(232,93,140,0.5)',borderRadius:14,
+          padding:'10px 16px',fontFamily:'"Baloo 2"',fontWeight:800,
+          fontSize:'0.92rem',color:'white',textAlign:'center',lineHeight:1.5,width:'100%'}}>
+          💡 {q.exp}
+          <div style={{fontSize:'0.75rem',color:'rgba(255,255,255,0.5)',marginTop:4,fontWeight:600}}>Moving to next question…</div>
+        </motion.div>
       )}
-      {results[qIdx]!==true && (
+      {!showExp && results[qIdx]!==true && (
         <div style={{display:'flex',gap:8,width:'100%',maxWidth:320}}>
           <input value={inp} onChange={e=>setInp(e.target.value)}
             onKeyDown={e=>e.key==='Enter'&&handleCheck()}
@@ -306,9 +335,18 @@ function StationB({ onComplete }) {
 
 /* ─── Station C — Orientation Flip ───────────────────────────────────────── */
 const ORIENT_Qs = [
-  { q:'🔄 Q1: Flip to HORIZONTAL view. Which animal now has the LONGEST bar? Type its name.', ans:'dogs', hint:'Dogs = 9 — the longest bar in any orientation!', dsIdx:0 },
-  { q:'🔄 Q2: Switch to VERTICAL view. Which colour bar is the SHORTEST?', ans:'yellow', hint:'Yellow = 3 — the lowest bar in the graph.', dsIdx:1 },
-  { q:'🔄 Q3: Flip between vertical and horizontal. Does the DATA (the numbers) change? Type Yes or No.', ans:'no', hint:'Orientation only changes the look — never the data!', dsIdx:2 },
+  { q:'🔄 Q1: Flip to HORIZONTAL view. Which animal now has the LONGEST bar? Type its name.',
+    ans:'dogs', hint:'Dogs = 9 — the longest bar in any orientation!',
+    exp:'The answer is Dogs. Dogs has the value 9, the highest number, so its bar is the longest in both vertical and horizontal views!',
+    dsIdx:0 },
+  { q:'🔄 Q2: Switch to VERTICAL view. Which colour bar is the SHORTEST?',
+    ans:'yellow', hint:'Yellow = 3 — the lowest bar in the graph.',
+    exp:'The answer is Yellow. Yellow has the value 3, the smallest number, so it has the shortest bar in the graph!',
+    dsIdx:1 },
+  { q:'🔄 Q3: Flip between vertical and horizontal. Does the DATA (the numbers) change? Type Yes or No.',
+    ans:'no', hint:'Orientation only changes the look — never the data!',
+    exp:'The answer is No. Flipping the orientation never changes the data. The numbers stay exactly the same — only the direction of the bars changes!',
+    dsIdx:2 },
 ]
 
 function StationC({ onComplete }) {
@@ -316,17 +354,30 @@ function StationC({ onComplete }) {
   const [orient, setOrient] = useState('vertical')
   const [inp, setInp] = useState('')
   const [results, setResults] = useState([null,null,null])
+  const [showExp, setShowExp] = useState(false)
+  const { speak } = useAudio()
   const allDone = results.every(r=>r===true)
   const q = ORIENT_Qs[qIdx]
   const data = DS[q.dsIdx]
 
   React.useEffect(()=>{ if(allDone) onComplete() },[allDone])
 
+  const advance = () => {
+    setShowExp(false)
+    if(qIdx < ORIENT_Qs.length-1){ setQIdx(qIdx+1); setInp(''); setOrient('vertical') }
+  }
+
   const handleCheck = () => {
-    if (results[qIdx]===true) return
+    if (results[qIdx]===true || showExp) return
     const ok = inp.trim().toLowerCase() === q.ans.toLowerCase()
     const nr=[...results]; nr[qIdx]=ok; setResults(nr)
-    if(ok) setTimeout(()=>{ if(qIdx<ORIENT_Qs.length-1){setQIdx(qIdx+1);setInp('');setOrient('vertical')} }, 900)
+    if(ok){
+      setTimeout(()=>advance(), 900)
+    } else {
+      setShowExp(true)
+      speak([`/assets/audio/sim_exp_orient_q${qIdx+1}.mp3`])
+      setTimeout(()=>advance(), 2500)
+    }
   }
 
   return (
@@ -354,12 +405,18 @@ function StationC({ onComplete }) {
       <div style={{background:'rgba(0,0,0,0.3)',borderRadius:14,padding:'8px 12px',display:'inline-block'}}>
         <MiniBarGraph data={data} orientation={orient} />
       </div>
-      {results[qIdx]===false && (
-        <div style={{fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.88rem',color:'#E85D8C',textAlign:'center'}}>
-          Not quite! 💡 {q.hint}
-        </div>
+      {/* Explanation banner */}
+      {showExp && (
+        <motion.div initial={{opacity:0,y:4}} animate={{opacity:1,y:0}} style={{
+          background:'linear-gradient(135deg,rgba(232,93,140,0.18),rgba(190,24,93,0.12))',
+          border:'2px solid rgba(232,93,140,0.5)',borderRadius:14,
+          padding:'10px 16px',fontFamily:'"Baloo 2"',fontWeight:800,
+          fontSize:'0.92rem',color:'white',textAlign:'center',lineHeight:1.5,width:'100%'}}>
+          💡 {q.exp}
+          <div style={{fontSize:'0.75rem',color:'rgba(255,255,255,0.5)',marginTop:4,fontWeight:600}}>Moving to next question…</div>
+        </motion.div>
       )}
-      {results[qIdx]!==true && (
+      {!showExp && results[qIdx]!==true && (
         <div style={{display:'flex',gap:8,width:'100%',maxWidth:320}}>
           <input value={inp} onChange={e=>setInp(e.target.value)}
             onKeyDown={e=>e.key==='Enter'&&handleCheck()}
