@@ -69,13 +69,6 @@ export default function Play() {
     } else {
       dispatch({ type: 'WRONG_ANSWER' })
       setSessionStreak(0)
-      setSessionHearts(h => {
-        const next = h - 1
-        if (next <= 0) {
-          setTimeout(() => finishWorld(sessionCorrect, qIdx + 1), 1400)
-        }
-        return next
-      })
     }
 
     const nextIdx = qIdx + 1
@@ -330,28 +323,31 @@ export default function Play() {
           </div>
 
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              onClick={handleNextWorld}
-              style={{
-                background: 'rgba(255,255,255,0.08)',
-                border: '2px solid rgba(255,255,255,0.2)',
-                borderRadius: '50px', padding: '10px 22px',
-                fontFamily: '"Baloo 2"', fontWeight: 800,
-                fontSize: '0.95rem', color: 'white', cursor: 'pointer',
-              }}
-            >🌍 More Worlds</button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              onClick={handleToReflect}
-              style={{
-                background: 'linear-gradient(135deg,#F5A623,#FFC94A)',
-                border: 'none', borderRadius: '50px',
-                padding: '10px 22px',
-                fontFamily: '"Baloo 2"', fontWeight: 800,
-                fontSize: '0.95rem', color: '#1a1030', cursor: 'pointer',
-                boxShadow: '0 4px 16px rgba(245,166,35,0.4)',
-              }}
-            >📋 See Results!</motion.button>
+            {!allWorldsPlayed ? (
+              <button
+                onClick={handleNextWorld}
+                style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '2px solid rgba(255,255,255,0.2)',
+                  borderRadius: '50px', padding: '10px 22px',
+                  fontFamily: '"Baloo 2"', fontWeight: 800,
+                  fontSize: '0.95rem', color: 'white', cursor: 'pointer',
+                }}
+              >🌍 Next World</button>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                onClick={handleToReflect}
+                style={{
+                  background: 'linear-gradient(135deg,#F5A623,#FFC94A)',
+                  border: 'none', borderRadius: '50px',
+                  padding: '10px 22px',
+                  fontFamily: '"Baloo 2"', fontWeight: 800,
+                  fontSize: '0.95rem', color: '#1a1030', cursor: 'pointer',
+                  boxShadow: '0 4px 16px rgba(245,166,35,0.4)',
+                }}
+              >📋 See Results! 🏆</motion.button>
+            )}
           </div>
         </motion.div>
       </div>

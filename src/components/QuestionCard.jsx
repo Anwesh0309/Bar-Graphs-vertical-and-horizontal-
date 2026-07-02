@@ -50,7 +50,7 @@ export default function QuestionCard({ question, onAnswer, questionNum, total, w
     timerRef.current = setTimeout(() => {
       setShowFeedback(false)
       onAnswer(opt, isCorrect)
-    }, 1200)
+    }, 4000)
   }
 
   if (!question) return null
@@ -120,23 +120,15 @@ export default function QuestionCard({ question, onAnswer, questionNum, total, w
               disabled={selected !== null}
               style={{
                 background: bg, border,
-                borderRadius: '12px', padding: '14px 8px',
-                fontFamily: '"Baloo 2"', fontWeight: 800,
-                fontSize: '1.2rem', color: 'white',
+                borderRadius: '12px', padding: '24px 12px',
+                fontFamily: '"Poppins", sans-serif', fontWeight: 700,
+                fontSize: '1.4rem', color: 'white',
                 cursor: selected !== null ? 'default' : 'pointer',
                 transition: 'all 0.15s',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                gap: '6px',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
               }}
             >
-              <span style={{
-                width: 24, height: 24, borderRadius: '50%',
-                background: 'rgba(255,255,255,0.12)',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '0.75rem', fontWeight: 800, flexShrink: 0,
-              }}>
-                {String.fromCharCode(65 + i)}
-              </span>
               {opt}
             </motion.button>
           )
@@ -147,46 +139,42 @@ export default function QuestionCard({ question, onAnswer, questionNum, total, w
       <AnimatePresence>
         {showFeedback && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.7 }}
+            initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.7 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ type: 'spring', bounce: 0.4, duration: 0.5 }}
             style={{
               position: 'absolute', inset: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(0,0,0,0.55)',
-              borderRadius: '20px',
+              background: 'rgba(0,0,0,0.6)',
+              borderRadius: '14px',
               zIndex: 10,
               pointerEvents: 'none',
             }}
           >
             <div style={{
-              background: feedbackType === 'correct'
-                ? 'linear-gradient(135deg,rgba(74,222,128,0.95),rgba(16,185,129,0.95))'
-                : 'linear-gradient(135deg,rgba(232,93,140,0.95),rgba(190,24,93,0.95))',
-              borderRadius: '18px',
-              padding: '20px 32px',
+              background: feedbackType === 'correct' ? '#4caf50' : '#e53935',
+              borderRadius: '24px',
+              padding: '30px 40px',
               textAlign: 'center',
-              fontFamily: '"Baloo 2"',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-              maxWidth: '80%',
+              fontFamily: '"Poppins", sans-serif',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
+              width: '80%', maxWidth: '400px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
             }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '6px' }}>
-                {feedbackType === 'correct' ? '🎉' : '💡'}
+              <div style={{ fontSize: '3.5rem', lineHeight: 1, filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.2))' }}>
+                {feedbackType === 'correct' ? '🎉' : '🥺'}
               </div>
-              <div style={{ fontWeight: 800, fontSize: '1.3rem', color: 'white' }}>
+              <div style={{ fontWeight: 800, fontSize: '1.8rem', color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {feedbackType === 'correct' ? 'Correct!' : 'Not quite!'}
               </div>
-              {feedbackType === 'wrong' && explanation && (
+              {explanation && (
                 <div style={{
-                  marginTop: '6px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)',
-                  fontWeight: 600, lineHeight: 1.4,
+                  fontSize: '1rem', color: 'white',
+                  fontWeight: 500, lineHeight: 1.5,
+                  marginTop: '4px',
                 }}>
                   {explanation}
-                </div>
-              )}
-              {feedbackType === 'correct' && (
-                <div style={{ marginTop: '4px', color: 'rgba(255,255,255,0.85)', fontWeight: 600, fontSize: '0.85rem' }}>
-                  +10 XP ⭐
                 </div>
               )}
             </div>

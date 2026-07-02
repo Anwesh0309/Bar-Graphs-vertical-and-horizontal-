@@ -284,7 +284,6 @@ function StationB({ onComplete }) {
       setTimeout(() => advance(nr), 900)
     } else {
       setShowExp(true)
-      speak([`/assets/audio/sim_exp_scale_q${qIdx + 1}.mp3`])
       setTimeout(() => advance(nr), 2500)
     }
   }
@@ -394,7 +393,6 @@ function StationC({ onComplete }) {
       setTimeout(() => advance(nr), 900)
     } else {
       setShowExp(true)
-      speak([`/assets/audio/sim_exp_orient_q${qIdx + 1}.mp3`])
       setTimeout(() => advance(nr), 2500)
     }
   }
@@ -573,12 +571,6 @@ const TABS = [
   { id:'orientation', icon:'🔄', label:'C — Orientation Flip', color:'#A78BFA' },
   { id:'error',       icon:'🔎', label:'D — Spot the Error',   color:'#E85D8C' },
 ]
-const NARR = {
-  builder: ['sim_barbuilder'],
-  scale: ['sim_scale'],
-  orientation: ['sim_orient'],
-  error: ['sim_error'],
-}
 
 export default function Simulate() {
   const navigate = useNavigate()
@@ -587,6 +579,13 @@ export default function Simulate() {
   const [activeTab, setActiveTab] = useState('builder')
   const [done, setDone] = useState({ builder:false, scale:false, orientation:false, error:false })
   const allDone = Object.values(done).every(Boolean)
+
+  const NARR_MAP = {
+    builder: narrationScripts.simulate.barBuilder,
+    scale:   narrationScripts.simulate.scaleSlider,
+    orientation: narrationScripts.simulate.orientation,
+    error:   narrationScripts.simulate.spotError,
+  }
 
   // Station locking: can only access a tab if all previous tabs are done
   const tabOrder = ['builder','scale','orientation','error']
@@ -597,7 +596,7 @@ export default function Simulate() {
   }
 
   React.useEffect(()=>{
-    speak(['/assets/audio/sim_welcome.mp3'])
+    speak(narrationScripts.simulate.welcome)
     return ()=>stopAll()
   },[])
 
@@ -605,8 +604,7 @@ export default function Simulate() {
     if (!isUnlocked(id)) return
     stopAll()
     setActiveTab(id)
-    const key = NARR[id]?.[0]
-    if (key) speak([`/assets/audio/${key}.mp3`])
+    if (NARR_MAP[id]) speak(NARR_MAP[id])
   }
 
   const markDone = (id) => {
@@ -618,8 +616,7 @@ export default function Simulate() {
         const next = tabOrder[idx+1]
         stopAll()
         setActiveTab(next)
-        const key = NARR[next]?.[0]
-        if (key) speak([`/assets/audio/${key}.mp3`])
+        if (NARR_MAP[next]) speak(NARR_MAP[next])
       }, 1200)
     }
   }

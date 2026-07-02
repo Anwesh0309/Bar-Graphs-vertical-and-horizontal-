@@ -25,17 +25,7 @@ export default function HUD({ stars, hearts, streak, questionNum, totalQuestions
         }}>{xp}</span>
       </div>
 
-      {/* Hearts */}
-      <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-        {Array.from({ length: maxHearts }).map((_, i) => (
-          <span key={i} style={{
-            fontSize: 'clamp(1.1rem,3vw,1.4rem)',
-            opacity: i < hearts ? 1 : 0.18,
-            filter: i < hearts ? 'none' : 'grayscale(100%)',
-            transition: 'all 0.35s',
-          }}>❤️</span>
-        ))}
-      </div>
+      {/* Hearts removed per user request */}
 
       {/* Streak */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
