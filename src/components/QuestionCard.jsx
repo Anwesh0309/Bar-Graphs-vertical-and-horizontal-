@@ -22,13 +22,11 @@ export default function QuestionCard({ question, onAnswer, questionNum, total, w
     setShowFeedback(false)
     setFeedbackType(null)
     if (!question) return
-    // Try to find the audio file for this question by stem text
-    const stemUrl = audioMap[question.stem]
-    // Also try by worldId + question index pattern
-    const worldKey = worldId ? `/assets/audio/play_${worldId}_q${questionNum}.mp3` : null
-    const url = stemUrl || worldKey
-    if (url) {
-      setTimeout(() => speak([url]), 200)
+    
+    // Play the narration by passing the question text directly,
+    // which matches a key in the audioMap.
+    if (question.stem) {
+      setTimeout(() => speak([question.stem]), 200)
     }
   }, [question?.id, questionNum])
 
@@ -57,29 +55,33 @@ export default function QuestionCard({ question, onAnswer, questionNum, total, w
   const { graph, stem, options, correctAnswer, explanation } = question
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '8px' }}>
+    <div style={{ 
+      display: 'flex', flexDirection: 'column', height: '100%', gap: '16px',
+      background: 'rgba(255,255,255,0.03)', // subtle dark card background like SS
+      border: '1px solid rgba(255,255,255,0.05)',
+      borderRadius: '16px',
+      padding: '24px',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+    }}>
       {/* Question stem */}
-      <div style={{
-        background: 'rgba(255,255,255,0.07)',
-        borderRadius: '14px',
-        padding: '12px 16px',
-        fontFamily: '"Baloo 2"',
-        fontWeight: 800,
-        fontSize: 'clamp(1rem,2.4vw,1.2rem)',
+      <h2 style={{
+        fontFamily: '"Poppins", sans-serif',
+        fontWeight: 700,
+        fontSize: 'clamp(1.1rem,2.5vw,1.35rem)',
         color: 'white',
-        lineHeight: 1.5,
+        lineHeight: 1.4,
         textAlign: 'center',
-        flexShrink: 0,
+        margin: '0 0 8px 0'
       }}>
-        <span style={{ color: '#FFC94A', marginRight: '6px', fontWeight: 900 }}>Q{questionNum}.</span>
         {stem}
-      </div>
+      </h2>
 
       {/* Bar graph */}
       <div style={{
         display: 'flex', justifyContent: 'center', alignItems: 'center',
-        background: 'rgba(0,0,0,0.3)', borderRadius: '14px',
-        padding: '8px', flexShrink: 0,
+        background: 'rgba(0,0,0,0.2)', borderRadius: '12px',
+        padding: '12px', flexShrink: 0,
+        margin: '0 auto', maxWidth: '100%', width: 'fit-content'
       }}>
         <BarGraph
           orientation={graph.orientation === 'mixed' ? 'vertical' : graph.orientation}
@@ -102,8 +104,8 @@ export default function QuestionCard({ question, onAnswer, questionNum, total, w
         {options.map((opt, i) => {
           const isSelected = selected === opt
           const isCorrect = String(opt) === String(correctAnswer)
-          let bg = 'rgba(255,255,255,0.08)'
-          let border = '2px solid rgba(255,255,255,0.15)'
+          let bg = 'rgba(255,255,255,0.06)'
+          let border = '2px solid rgba(255,255,255,0.1)'
           if (isSelected) {
             if (isCorrect) { bg = 'rgba(74,222,128,0.25)'; border = '2px solid #4ADE80' }
             else { bg = 'rgba(232,93,140,0.25)'; border = '2px solid #E85D8C' }
