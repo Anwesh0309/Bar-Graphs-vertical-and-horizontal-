@@ -48,7 +48,7 @@ export default function QuestionCard({ question, onAnswer, questionNum, total, w
     timerRef.current = setTimeout(() => {
       setShowFeedback(false)
       onAnswer(opt, isCorrect)
-    }, 4000)
+    }, 1000)
   }
 
   if (!question) return null
