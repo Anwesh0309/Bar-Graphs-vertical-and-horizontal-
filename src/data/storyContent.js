@@ -7,7 +7,7 @@ export const storyPages = [
     owlSays: "Let's help Aunty Lin show her sales! 🍎",
     audioKey: "Aunty Lin sold fruits at the market today. She counted 8 apples, 5 mangoes, and 3 longans sold.",
     bgColor: "#FF6B6B",
-    emoji: "🍎🥭🍈",
+    image: "/images/story1.png",
     data: [
       { label: 'Apples', value: 8, color: '#FF6B6B' },
       { label: 'Mangoes', value: 5, color: '#FFD93D' },
@@ -22,7 +22,7 @@ export const storyPages = [
     owlSays: "Every graph needs two axes to stand on! 📏",
     audioKey: "Aunty Lin draws a line up — the vertical axis — and a line across — the horizontal axis — to make her graph.",
     bgColor: "#4ECDC4",
-    emoji: "📏✏️📐",
+    image: "/images/story2.png",
     data: null
   },
   {
@@ -33,7 +33,7 @@ export const storyPages = [
     owlSays: "Look — Apples have the tallest bar! 🌟",
     audioKey: "She draws one bar for each fruit. The taller the bar, the more fruits she sold!",
     bgColor: "#A855F7",
-    emoji: "📊📈🌟",
+    image: "/images/story3.png",
     data: [
       { label: 'Apples', value: 8, color: '#FF6B6B' },
       { label: 'Mangoes', value: 5, color: '#FFD93D' },
@@ -48,7 +48,7 @@ export const storyPages = [
     owlSays: "That's the power of a bar graph! 🎉",
     audioKey: "Now everyone can see at a glance which fruit sold the most — just by looking at the bars!",
     bgColor: "#F59E0B",
-    emoji: "🎉📊🦉",
+    image: "/images/story4.png",
     data: [
       { label: 'Apples', value: 8, color: '#FF6B6B' },
       { label: 'Mangoes', value: 5, color: '#FFD93D' },

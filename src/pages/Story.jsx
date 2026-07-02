@@ -65,7 +65,10 @@ export default function Story() {
   }
 
   return (
-    <div className="page-frame">
+    <div className="page-frame" style={{ 
+      background: 'linear-gradient(135deg, #1b103c 0%, #291b5c 100%)',
+      fontFamily: '"Poppins", sans-serif'
+    }}>
       <PhaseStepper active="story" />
 
       {/* Progress bar */}
@@ -77,164 +80,180 @@ export default function Story() {
         />
       </div>
 
-      {/* Main content — fixed height, NO scroll */}
+      {/* Main content */}
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'flex-start',
-        padding: '10px 14px 8px', gap: '8px', overflow: 'hidden',
+        alignItems: 'center', justifyContent: 'center',
+        padding: '24px 20px', gap: '24px', overflow: 'hidden',
       }}>
-        {/* Page dots */}
-        <div style={{ display: 'flex', gap: '7px', flexShrink: 0 }}>
-          {storyPages.map((_, i) => (
-            <div key={i} style={{
-              width: i === page ? 22 : 9, height: 9,
-              borderRadius: 50,
-              background: i === page ? '#F5A623' : i < page ? '#4ADE80' : 'rgba(255,255,255,0.2)',
-              transition: 'all 0.3s',
-            }} />
-          ))}
-        </div>
-
-        {/* Story card */}
+        
+        {/* Story card - Two column layout */}
         <AnimatePresence mode="wait">
           <motion.div
             key={page}
-            initial={{ opacity: 0, x: 40 }}
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -40 }}
-            transition={{ duration: 0.32 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.35 }}
             style={{
-              width: '100%', maxWidth: 580,
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: 22,
+              width: '100%', maxWidth: 850, height: '420px',
+              background: '#241a4a', // Dark interior like screenshot
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 24,
               overflow: 'hidden',
-              display: 'flex', flexDirection: 'column',
+              display: 'flex', flexDirection: 'row',
               flexShrink: 0,
+              boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
             }}
           >
-            {/* Illustration area */}
+            {/* Left side: Illustration */}
             <div style={{
+              flex: '1.2', // Slightly wider left side
+              position: 'relative',
               background: sceneBg,
-              padding: '16px 20px 12px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              gap: '16px', flexShrink: 0,
+              overflow: 'hidden'
             }}>
-              {/* Big emoji */}
-              <span style={{
-                fontSize: 'clamp(2.5rem,6vw,3.5rem)',
-                filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.4))',
-              }}>{ill.big}</span>
-
-              {/* Item emojis */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxWidth: 180 }}>
-                {ill.items.map((em, i) => (
-                  <motion.span
-                    key={i}
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.05 * i }}
-                    style={{ fontSize: 'clamp(1.2rem,3vw,1.6rem)' }}
-                  >{em}</motion.span>
-                ))}
-              </div>
-
-              {/* Bar graph on pages 3 and 4 */}
-              {current.data && (
+              {current.image && (
+                <img 
+                  src={current.image} 
+                  alt={current.title}
+                  style={{
+                    width: '100%', height: '100%', objectFit: 'cover'
+                  }}
+                />
+              )}
+              {/* Fallback emoji if no image */}
+              {!current.image && (
                 <div style={{
-                  background: 'rgba(0,0,0,0.35)',
-                  borderRadius: 14, padding: '6px 8px', flexShrink: 0,
+                  width: '100%', height: '100%', display: 'flex', 
+                  alignItems: 'center', justifyContent: 'center', fontSize: '6rem'
                 }}>
-                  <BarGraph
-                    orientation="vertical"
-                    categories={current.data}
-                    scale={2}
-                    maxValue={10}
-                    animated={true}
-                    showValues={true}
-                    title={page === 3 ? "Aunty Lin's Sales" : undefined}
-                    compact={true}
-                  />
+                  {ill.big}
                 </div>
               )}
             </div>
 
-            {/* Text area */}
+            {/* Right side: Text area */}
             <div style={{
-              padding: '14px 20px 12px',
-              display: 'flex', flexDirection: 'column', gap: '10px',
+              flex: '1',
+              padding: '32px 32px 32px 24px',
+              display: 'flex', flexDirection: 'column',
+              justifyContent: 'center',
             }}>
-              {/* Page label */}
-              <div style={{
-                fontFamily: '"Baloo 2"', fontWeight: 800,
-                fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)',
-                letterSpacing: '0.08em', textTransform: 'uppercase',
-              }}>Page {page + 1} of {storyPages.length} — {current.title}</div>
+              
+              {/* Title */}
+              <h2 style={{
+                fontFamily: '"Baloo 2", sans-serif', fontWeight: 800,
+                fontSize: '2rem', color: '#FFC94A', 
+                margin: '0 0 16px 0', lineHeight: 1.2,
+                textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+              }}>
+                {current.title}
+              </h2>
 
-              {/* Main story text — LARGE & BOLD */}
+              {/* Main story text */}
               <div style={{
-                fontFamily: '"Baloo 2"', fontWeight: 800,
-                fontSize: 'clamp(1rem,2.4vw,1.2rem)',
-                color: '#ffffff', lineHeight: 1.55,
-                textAlign: 'center',
+                fontFamily: '"Poppins", sans-serif', fontWeight: 400,
+                fontSize: '1.05rem',
+                color: 'rgba(255,255,255,0.75)', lineHeight: 1.6,
+                marginBottom: '28px'
               }}>
                 {current.text}
               </div>
 
-              {/* Owl says */}
+              {/* Interactive prompt button (simulate the long button) */}
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1.5px solid rgba(255,166,50,0.3)',
+                  borderRadius: 12, padding: '12px 16px',
+                  fontFamily: '"Baloo 2", sans-serif', fontWeight: 700,
+                  fontSize: '1.1rem', color: '#FFC94A',
+                  cursor: 'pointer', textAlign: 'center',
+                  marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                }}
+              >
+                ✨ "Let's explore this!" ✨
+              </motion.button>
+
+              {/* Owl says (Speech bubble) */}
               <div style={{
-                display: 'flex', alignItems: 'center', gap: '10px',
-                background: 'rgba(245,166,35,0.12)',
-                border: '1.5px solid rgba(245,166,35,0.3)',
-                borderRadius: 14, padding: '10px 14px',
+                display: 'flex', alignItems: 'flex-start', gap: '12px', marginTop: 'auto'
               }}>
-                <span style={{ fontSize: '1.6rem', flexShrink: 0 }}>🦉</span>
-                <span style={{
-                  fontFamily: '"Baloo 2"', fontWeight: 700,
-                  fontSize: 'clamp(0.88rem,2vw,1rem)',
-                  color: '#FFC94A', fontStyle: 'italic', lineHeight: 1.4,
-                }}>{current.owlSays}</span>
+                <div style={{
+                  width: 48, height: 48, borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #F5A623, #FFC94A)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1.5rem', flexShrink: 0,
+                  boxShadow: '0 4px 12px rgba(245,166,35,0.3)'
+                }}>
+                  🦉
+                </div>
+                <div style={{
+                  background: 'white',
+                  borderRadius: '16px 16px 16px 4px',
+                  padding: '12px 16px',
+                  position: 'relative'
+                }}>
+                  <span style={{
+                    fontFamily: '"Poppins", sans-serif', fontWeight: 500,
+                    fontSize: '0.9rem', color: '#333', lineHeight: 1.4,
+                  }}>{current.owlSays}</span>
+                </div>
               </div>
+
             </div>
           </motion.div>
         </AnimatePresence>
 
-        {/* Navigation */}
+        {/* Navigation bottom bar */}
         <div style={{
-          display: 'flex', gap: '12px', flexShrink: 0, alignItems: 'center',
+          width: '100%', maxWidth: 850,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginTop: '8px'
         }}>
+          {/* Back button */}
           <button
             onClick={handleBack}
             style={{
-              background: 'rgba(255,255,255,0.09)',
-              border: '2px solid rgba(255,255,255,0.2)',
-              borderRadius: 50, padding: '10px 22px',
-              fontFamily: '"Baloo 2"', fontWeight: 700,
-              fontSize: 'clamp(0.9rem,2vw,1rem)', color: 'white',
-              cursor: 'pointer',
+              background: 'transparent',
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: 50, padding: '10px 24px',
+              fontFamily: '"Poppins", sans-serif', fontWeight: 500,
+              fontSize: '0.95rem', color: 'rgba(255,255,255,0.7)',
+              cursor: 'pointer', transition: 'all 0.2s',
             }}
-          >← Back</button>
+            onMouseOver={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)', e.currentTarget.style.color = '#fff' }}
+            onMouseOut={(e) => { e.currentTarget.style.background = 'transparent', e.currentTarget.style.color = 'rgba(255,255,255,0.7)' }}
+          >‹ Back</button>
 
-          <div style={{
-            fontFamily: '"Baloo 2"', fontWeight: 800,
-            color: 'rgba(255,255,255,0.45)',
-            fontSize: '0.9rem',
-          }}>
-            {page + 1} / {storyPages.length}
+          {/* Page dots */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {storyPages.map((_, i) => (
+              <div key={i} style={{
+                width: 8, height: 8,
+                borderRadius: '50%',
+                background: i === page ? '#FFC94A' : 'rgba(255,255,255,0.2)',
+                transition: 'all 0.3s',
+                transform: i === page ? 'scale(1.2)' : 'none'
+              }} />
+            ))}
           </div>
 
+          {/* Next button */}
           <motion.button
-            whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
             onClick={handleNext}
             style={{
               background: 'linear-gradient(135deg,#F5A623,#FFC94A)',
-              border: 'none', borderRadius: 50, padding: '10px 24px',
-              fontFamily: '"Baloo 2"', fontWeight: 900,
-              fontSize: 'clamp(0.9rem,2vw,1rem)', color: '#1a1030',
-              cursor: 'pointer', boxShadow: '0 4px 16px rgba(245,166,35,0.4)',
+              border: 'none', borderRadius: 50, padding: '10px 28px',
+              fontFamily: '"Poppins", sans-serif', fontWeight: 600,
+              fontSize: '0.95rem', color: '#1a1030',
+              cursor: 'pointer', boxShadow: '0 4px 12px rgba(245,166,35,0.25)',
             }}
           >
-            {page < storyPages.length - 1 ? 'Next →' : 'Start Exploring →'}
+            {page < storyPages.length - 1 ? 'Next ›' : 'Start ›'}
           </motion.button>
         </div>
       </div>
