@@ -266,6 +266,7 @@ export default function Play() {
                     onAnswer={handleAnswer}
                     questionNum={qIdx + 1}
                     total={questions.length}
+                    worldId={activeWorld?.id}
                   />
                 )}
               </motion.div>

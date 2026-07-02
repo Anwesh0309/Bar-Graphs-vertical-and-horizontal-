@@ -1,152 +1,198 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import PhaseStepper from '../components/PhaseStepper'
-import BarGraph from '../components/BarGraph'
 import { useAudio } from '../context/AudioContext'
 import { useProgress } from '../context/ProgressContext'
 import { narrationScripts } from '../utils/narration'
 
-// ── Datasets for simulations ────────────────────────────────────────────────
-const DATASETS = [
-  [
-    { label:'Cats', value:6, color:'#FF6B6B' },
-    { label:'Dogs', value:9, color:'#FFD93D' },
-    { label:'Birds', value:4, color:'#6BCB77' },
-    { label:'Fish', value:7, color:'#4D96FF' },
-  ],
-  [
-    { label:'Red', value:8, color:'#FF6B6B' },
-    { label:'Blue', value:5, color:'#4D96FF' },
-    { label:'Green', value:10, color:'#6BCB77' },
-    { label:'Yellow', value:3, color:'#FFD93D' },
-  ],
-  [
-    { label:'Mon', value:7, color:'#C77DFF' },
-    { label:'Tue', value:4, color:'#FF9F43' },
-    { label:'Wed', value:9, color:'#00D2FF' },
-    { label:'Thu', value:6, color:'#FF6B9D' },
-  ],
-]
-function getDS(idx) { return DATASETS[idx % DATASETS.length] }
+/* ─── shared colour palette for bars ──────────────────────────────────────── */
+const BAR_COLORS = ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#C77DFF']
 
-// ── Station A questions (Bar Builder) ───────────────────────────────────────
-const BUILDER_Qs = [
-  { q:'Drag the bars so Cats=6, Dogs=9, Birds=4, Fish=7. Match all bars!', dsIdx:0 },
-  { q:'Make the Red bar reach 8, Blue=5, Green=10, Yellow=3. Go!', dsIdx:1 },
-  { q:'Set Mon=7, Tue=4, Wed=9, Thu=6 on the bar graph below.', dsIdx:2 },
+/* ─── datasets ────────────────────────────────────────────────────────────── */
+const DS = [
+  [ {l:'Cats',v:6,c:'#FF6B6B'},{l:'Dogs',v:9,c:'#FFD93D'},{l:'Birds',v:4,c:'#6BCB77'},{l:'Fish',v:7,c:'#4D96FF'} ],
+  [ {l:'Red',v:8,c:'#FF6B6B'},{l:'Blue',v:5,c:'#4D96FF'},{l:'Green',v:10,c:'#6BCB77'},{l:'Yellow',v:3,c:'#FFD93D'} ],
+  [ {l:'Mon',v:7,c:'#C77DFF'},{l:'Tue',v:4,c:'#FF9F43'},{l:'Wed',v:9,c:'#00D2FF'},{l:'Thu',v:6,c:'#FF6B9D'} ],
 ]
 
-// ── Station B questions (Scale Slider) ──────────────────────────────────────
-const SCALE_Qs = [
-  {
-    q:'The scale is set to 2. How many units does the tallest bar (Dogs = 9) show? Move the slider to scale=2 and read the Dogs bar.',
-    answer: '9', hint: 'The data stays the same — only the gridlines change!',
-    dsIdx: 0,
-  },
-  {
-    q:'Change the scale to 5. How many gridlines does the Green bar (value=10) cross?',
-    answer: '2', hint: 'At scale=5, gridlines are at 0, 5, 10 — so 2 gridlines.',
-    dsIdx: 1,
-  },
-  {
-    q:'Set scale to 1. Which bar is the tallest, and what is its value?',
-    answer: 'Wed, 9', hint: 'At scale=1 every unit shows — find the highest bar!',
-    dsIdx: 2,
-  },
-]
+/* ─── compact SVG bar graph (no external BarGraph component, fully controlled) */
+function MiniBarGraph({ data, orientation='vertical', highlightIdx=null }) {
+  const W = orientation==='vertical' ? 260 : 240
+  const H = 160
+  const mL = orientation==='vertical' ? 28 : 64
+  const mB = orientation==='vertical' ? 32 : 18
+  const mT = 12; const mR = 14
+  const gW = W - mL - mR; const gH = H - mT - mB
+  const maxV = Math.max(...data.map(d=>d.v)) + 2
 
-// ── Station C questions (Orientation Flip) ──────────────────────────────────
-const ORIENT_Qs = [
-  {
-    q:'Flip to HORIZONTAL. Which animal now has the longest bar?',
-    answer: 'Dogs', hint: 'Dogs = 9 — the longest horizontal bar.',
-    dsIdx: 0,
-  },
-  {
-    q:'In VERTICAL view, which bar is the shortest?',
-    answer: 'Yellow', hint: 'Yellow = 3 — the lowest bar.',
-    dsIdx: 1,
-  },
-  {
-    q:'Flip between vertical and horizontal. Does the data (the numbers) change?',
-    answer: 'No', hint: 'Orientation only changes how the graph looks, not the data!',
-    dsIdx: 2,
-  },
-]
-
-// ── Station D questions (Spot the Error) ────────────────────────────────────
-const ERROR_SCENARIOS = [
-  {
-    title:'Pet Shop Sales',
-    correct:  [{ label:'Cats',value:6,color:'#FF6B6B' },{ label:'Dogs',value:9,color:'#FFD93D' },{ label:'Birds',value:4,color:'#6BCB77' }],
-    corrupted:[{ label:'Cats',value:3,color:'#FF6B6B' },{ label:'Dogs',value:9,color:'#FFD93D' },{ label:'Birds',value:4,color:'#6BCB77' }],
-    errorIdx:0, q:'One bar is wrong! Cats were sold 6 times but the graph shows something different. Tap the wrong bar!',
-    explanation:'The Cats bar shows 3, but 6 cats were sold. The bar should be twice as tall!',
-  },
-  {
-    title:'Colour Votes',
-    correct:  [{ label:'Red',value:8,color:'#FF6B6B' },{ label:'Blue',value:5,color:'#4D96FF' },{ label:'Green',value:10,color:'#6BCB77' }],
-    corrupted:[{ label:'Red',value:8,color:'#FF6B6B' },{ label:'Blue',value:5,color:'#4D96FF' },{ label:'Green',value:5,color:'#6BCB77' }],
-    errorIdx:2, q:'Green got 10 votes but the graph looks wrong. Find the mistake!',
-    explanation:'Green should reach 10, not 5. The bar was drawn only half as high as it should be!',
-  },
-  {
-    title:'Days of Sun',
-    correct:  [{ label:'Mon',value:7,color:'#C77DFF' },{ label:'Tue',value:4,color:'#FF9F43' },{ label:'Wed',value:9,color:'#00D2FF' }],
-    corrupted:[{ label:'Mon',value:7,color:'#C77DFF' },{ label:'Tue',value:9,color:'#FF9F43' },{ label:'Wed',value:9,color:'#00D2FF' }],
-    errorIdx:1, q:'Tuesday had 4 sunny hours, but the bar shows something else. Which bar is wrong?',
-    explanation:'Tuesday shows 9, but it should show 4. Someone drew the bar too tall!',
-  },
-]
-
-// ── Mini inline BarBuilder (drag-free, click-to-set version for simplicity) ─
-function MiniBarBuilder({ dataset, onAllMatch }) {
-  const [vals, setVals] = useState(() => dataset.map(() => 0))
-  const maxV = Math.max(...dataset.map(d=>d.value)) + 2
-  const match = dataset.every((d,i) => vals[i] === d.value)
-
-  React.useEffect(() => { if (match) onAllMatch && onAllMatch() }, [match])
-
-  const adjust = (i, delta) => {
-    setVals(prev => {
-      const n=[...prev]; n[i]=Math.max(0,Math.min(maxV, n[i]+delta)); return n
-    })
+  if (orientation==='vertical') {
+    const bSlot = gW / data.length
+    return (
+      <svg width={W} height={H} style={{overflow:'visible',display:'block'}}>
+        {/* gridlines */}
+        {[0,2,4,6,8,10].filter(v=>v<=maxV).map(v=>{
+          const y = mT + gH - (v/maxV)*gH
+          return <g key={v}>
+            <line x1={mL} y1={y} x2={mL+gW} y2={y} stroke='rgba(255,255,255,0.12)' strokeWidth={v===0?1.5:0.7}/>
+            <text x={mL-4} y={y+4} textAnchor='end' fill='rgba(255,255,255,0.55)' fontSize={9} fontFamily='"Baloo 2"' fontWeight='700'>{v}</text>
+          </g>
+        })}
+        <line x1={mL} y1={mT} x2={mL} y2={mT+gH} stroke='rgba(255,255,255,0.4)' strokeWidth={1.5}/>
+        <line x1={mL} y1={mT+gH} x2={mL+gW} y2={mT+gH} stroke='rgba(255,255,255,0.4)' strokeWidth={1.5}/>
+        {data.map((d,i)=>{
+          const bw = bSlot*0.6; const bh = (d.v/maxV)*gH
+          const bx = mL + i*bSlot + (bSlot-bw)/2; const by = mT+gH-bh
+          const col = highlightIdx===i ? '#E85D8C' : d.c
+          return <g key={d.l}>
+            <rect x={bx} y={by} width={bw} height={bh} fill={col} rx={3} style={{filter:`drop-shadow(0 0 4px ${col}88)`}}/>
+            <text x={bx+bw/2} y={by-4} textAnchor='middle' fill='white' fontSize={9} fontFamily='"Baloo 2"' fontWeight='800'>{d.v}</text>
+            <text x={bx+bw/2} y={mT+gH+13} textAnchor='middle' fill='rgba(255,255,255,0.75)' fontSize={9} fontFamily='"Baloo 2"' fontWeight='700'>
+              {d.l.length>5?d.l.slice(0,5)+'…':d.l}
+            </text>
+          </g>
+        })}
+      </svg>
+    )
   }
+  // horizontal
+  const bSlot = gH / data.length
   return (
-    <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+    <svg width={W} height={H} style={{overflow:'visible',display:'block'}}>
+      {[0,2,4,6,8,10].filter(v=>v<=maxV).map(v=>{
+        const x = mL + (v/maxV)*gW
+        return <g key={v}>
+          <line x1={x} y1={mT} x2={x} y2={mT+gH} stroke='rgba(255,255,255,0.12)' strokeWidth={v===0?1.5:0.7}/>
+          <text x={x} y={mT+gH+12} textAnchor='middle' fill='rgba(255,255,255,0.55)' fontSize={9} fontFamily='"Baloo 2"' fontWeight='700'>{v}</text>
+        </g>
+      })}
+      <line x1={mL} y1={mT} x2={mL} y2={mT+gH} stroke='rgba(255,255,255,0.4)' strokeWidth={1.5}/>
+      <line x1={mL} y1={mT+gH} x2={mL+gW} y2={mT+gH} stroke='rgba(255,255,255,0.4)' strokeWidth={1.5}/>
+      {data.map((d,i)=>{
+        const bh2 = bSlot*0.58; const bw2 = (d.v/maxV)*gW
+        const by2 = mT + i*bSlot + (bSlot-bh2)/2
+        const col = highlightIdx===i ? '#E85D8C' : d.c
+        return <g key={d.l}>
+          <rect x={mL} y={by2} width={bw2} height={bh2} fill={col} rx={3} style={{filter:`drop-shadow(0 0 4px ${col}88)`}}/>
+          <text x={mL+bw2+4} y={by2+bh2/2+4} fill='white' fontSize={9} fontFamily='"Baloo 2"' fontWeight='800'>{d.v}</text>
+          <text x={mL-4} y={by2+bh2/2+4} textAnchor='end' fill='rgba(255,255,255,0.75)' fontSize={9} fontFamily='"Baloo 2"' fontWeight='700'>
+            {d.l.length>7?d.l.slice(0,6)+'…':d.l}
+          </text>
+        </g>
+      })}
+    </svg>
+  )
+}
+
+/* ─── shared styles ───────────────────────────────────────────────────────── */
+const S = {
+  qBox: (col='rgba(245,166,35,0.12)', border='rgba(245,166,35,0.35)') => ({
+    background: col, border:`2px solid ${border}`, borderRadius:14,
+    padding:'10px 14px', fontFamily:'"Baloo 2"', fontWeight:800,
+    fontSize:'clamp(0.92rem,2vw,1.05rem)', color:'white',
+    lineHeight:1.5, textAlign:'center', width:'100%',
+  }),
+  badge: (done,active)=>({
+    width:30,height:30,borderRadius:'50%',
+    display:'flex',alignItems:'center',justifyContent:'center',
+    fontFamily:'"Baloo 2"',fontWeight:900,fontSize:'0.8rem',
+    background: done?'#4ADE80':active?'rgba(245,166,35,0.3)':'rgba(255,255,255,0.07)',
+    border: done?'2px solid #4ADE80':active?'2px solid #F5A623':'2px solid rgba(255,255,255,0.12)',
+    color: done?'#1a1030':active?'#F5A623':'rgba(255,255,255,0.35)',
+    flexShrink:0,
+  }),
+  input: {
+    flex:1, background:'rgba(255,255,255,0.1)',
+    border:'2px solid rgba(255,255,255,0.25)',borderRadius:10,
+    padding:'9px 13px',color:'white',fontFamily:'"Baloo 2"',
+    fontWeight:800,fontSize:'1rem',outline:'none',
+  },
+  checkBtn: {
+    background:'linear-gradient(135deg,#F5A623,#FFC94A)',border:'none',
+    borderRadius:10,padding:'9px 18px',fontFamily:'"Baloo 2"',
+    fontWeight:900,color:'#1a1030',cursor:'pointer',fontSize:'0.95rem',
+    whiteSpace:'nowrap',
+  },
+}
+
+/* ─── MiniBarBuilder with + / − buttons ──────────────────────────────────── */
+function MiniBarBuilder({ dataset, onAllMatch }) {
+  const [vals, setVals] = useState(() => dataset.map(()=>0))
+  const maxV = Math.max(...dataset.map(d=>d.v)) + 2
+  const H = 110
+  const match = dataset.every((d,i)=>vals[i]===d.v)
+
+  React.useEffect(()=>{ if(match && onAllMatch) onAllMatch() }, [match])
+
+  const adj = (i,delta) => setVals(prev=>{
+    const n=[...prev]; n[i]=Math.max(0,Math.min(maxV,n[i]+delta)); return n
+  })
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
       {match && (
         <motion.div initial={{scale:0}} animate={{scale:1}}
-          style={{background:'rgba(74,222,128,0.2)',border:'2px solid #4ADE80',borderRadius:12,
-            padding:'6px 18px',fontFamily:'"Baloo 2"',fontWeight:800,color:'#4ADE80',fontSize:'1rem'}}>
+          style={{background:'rgba(74,222,128,0.2)',border:'2px solid #4ADE80',
+            borderRadius:12,padding:'5px 20px',fontFamily:'"Baloo 2"',
+            fontWeight:900,color:'#4ADE80',fontSize:'1rem'}}>
           ✅ Perfect Match!
         </motion.div>
       )}
-      <div style={{display:'flex',gap:14,alignItems:'flex-end'}}>
+      {/* Target label */}
+      <div style={{fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.78rem',
+        color:'rgba(255,255,255,0.55)',textAlign:'center',fontStyle:'italic'}}>
+        Target: {dataset.map(d=>`${d.l}=${d.v}`).join(' · ')}
+      </div>
+      {/* Bars row */}
+      <div style={{display:'flex',gap:10,alignItems:'flex-end',flexWrap:'nowrap'}}>
         {dataset.map((d,i)=>(
-          <div key={d.label} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
-            <span style={{fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.85rem',color:vals[i]===d.value?'#4ADE80':'#FFC94A'}}>{vals[i]}</span>
-            <div style={{width:36,height:120,background:'rgba(255,255,255,0.06)',borderRadius:6,display:'flex',flexDirection:'column',justifyContent:'flex-end',position:'relative'}}>
-              <div style={{position:'absolute',bottom:(d.value/maxV)*120-1.5,left:0,right:0,height:3,background:'rgba(255,255,255,0.35)',borderTop:'2px dashed rgba(255,255,255,0.5)'}}/>
-              <div style={{height:Math.max(2,(vals[i]/maxV)*120),background:vals[i]===d.value?`linear-gradient(to top,${d.color},#4ADE80)`:`linear-gradient(to top,${d.color}cc,${d.color})`,borderRadius:'4px 4px 0 0',transition:'height 0.2s'}}/>
+          <div key={d.l} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,flexShrink:0}}>
+            {/* current value */}
+            <span style={{fontFamily:'"Baloo 2"',fontWeight:900,fontSize:'0.9rem',
+              color:vals[i]===d.v?'#4ADE80':'#FFC94A',minWidth:20,textAlign:'center'}}>{vals[i]}</span>
+            {/* bar column */}
+            <div style={{width:34,height:H,background:'rgba(255,255,255,0.06)',
+              borderRadius:6,position:'relative',overflow:'hidden',flexShrink:0}}>
+              {/* target dashed line */}
+              <div style={{position:'absolute',bottom:`${(d.v/maxV)*100}%`,
+                left:0,right:0,height:2,borderTop:'2px dashed rgba(255,255,255,0.45)',zIndex:2}}/>
+              {/* user bar */}
+              <div style={{
+                position:'absolute',bottom:0,left:0,right:0,
+                height:`${Math.max(1,(vals[i]/maxV)*100)}%`,
+                background:vals[i]===d.v
+                  ?`linear-gradient(to top,${d.c},#4ADE80)`
+                  :`linear-gradient(to top,${d.c}bb,${d.c})`,
+                transition:'height 0.15s ease',borderRadius:'4px 4px 0 0',
+              }}/>
             </div>
-            <div style={{display:'flex',gap:3}}>
-              <button onClick={()=>adjust(i,1)} style={{width:24,height:24,background:'rgba(245,166,35,0.2)',border:'1px solid #F5A623',borderRadius:4,color:'#F5A623',fontWeight:900,cursor:'pointer',fontSize:'0.9rem'}}>+</button>
-              <button onClick={()=>adjust(i,-1)} style={{width:24,height:24,background:'rgba(232,93,140,0.15)',border:'1px solid #E85D8C',borderRadius:4,color:'#E85D8C',fontWeight:900,cursor:'pointer',fontSize:'0.9rem'}}>−</button>
+            {/* +/- buttons */}
+            <div style={{display:'flex',gap:2}}>
+              <button onClick={()=>adj(i,1)} style={{width:26,height:26,background:'rgba(245,166,35,0.2)',
+                border:'1.5px solid #F5A623',borderRadius:5,color:'#F5A623',
+                fontWeight:900,cursor:'pointer',fontSize:'1rem',lineHeight:1}}>+</button>
+              <button onClick={()=>adj(i,-1)} style={{width:26,height:26,background:'rgba(232,93,140,0.15)',
+                border:'1.5px solid #E85D8C',borderRadius:5,color:'#E85D8C',
+                fontWeight:900,cursor:'pointer',fontSize:'1rem',lineHeight:1}}>−</button>
             </div>
-            <span style={{fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.7rem',color:'rgba(255,255,255,0.7)'}}>{d.label}</span>
-            {vals[i]===d.value&&<span style={{fontSize:'0.8rem'}}>✅</span>}
+            <span style={{fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.72rem',
+              color:'rgba(255,255,255,0.7)',maxWidth:40,textAlign:'center',
+              overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.l}</span>
+            {vals[i]===d.v && <span style={{fontSize:'0.8rem'}}>✅</span>}
           </div>
         ))}
-      </div>
-      <div style={{fontFamily:'"Baloo 2"',fontSize:'0.78rem',color:'rgba(255,255,255,0.5)',fontStyle:'italic'}}>
-        Target: {dataset.map(d=>`${d.label}=${d.value}`).join(', ')}
       </div>
     </div>
   )
 }
 
-// ── Station A Component (3 questions, Bar Builder) ──────────────────────────
+/* ─── Station A — Bar Builder ─────────────────────────────────────────────── */
+const BUILDER_Qs = [
+  { q:'🧱 Challenge 1: Set Cats = 6, Dogs = 9, Birds = 4, Fish = 7 using the + and − buttons!', dsIdx:0 },
+  { q:'🧱 Challenge 2: Make Red = 8, Blue = 5, Green = 10, Yellow = 3. Match every bar!', dsIdx:1 },
+  { q:'🧱 Challenge 3: Set Mon = 7, Tue = 4, Wed = 9, Thu = 6. Complete the graph!', dsIdx:2 },
+]
+
 function StationA({ onComplete }) {
   const [qIdx, setQIdx] = useState(0)
   const [done, setDone] = useState([false,false,false])
@@ -154,407 +200,438 @@ function StationA({ onComplete }) {
   const q = BUILDER_Qs[qIdx]
 
   const handleMatch = () => {
-    setDone(prev=>{ const n=[...prev]; n[qIdx]=true; return n })
-    setTimeout(()=>{
-      if (qIdx < BUILDER_Qs.length-1) setQIdx(i=>i+1)
-      else if (!allDone) {}
-    }, 800)
+    if (done[qIdx]) return
+    const next = [...done]; next[qIdx]=true; setDone(next)
+    setTimeout(()=>{ if(qIdx<BUILDER_Qs.length-1) setQIdx(qIdx+1) }, 900)
   }
 
   React.useEffect(()=>{ if(allDone) onComplete() },[allDone])
 
   return (
-    <div style={{display:'flex',flexDirection:'column',gap:10,width:'100%',maxWidth:480}}>
-      <div style={{display:'flex',gap:5,justifyContent:'center'}}>
+    <div style={{display:'flex',flexDirection:'column',gap:8,width:'100%',alignItems:'center'}}>
+      {/* Progress dots */}
+      <div style={{display:'flex',gap:7,justifyContent:'center'}}>
         {BUILDER_Qs.map((_,i)=>(
-          <div key={i} style={{width:28,height:28,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',
-            fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.75rem',
-            background:done[i]?'#4ADE80':i===qIdx?'rgba(245,166,35,0.3)':'rgba(255,255,255,0.08)',
-            border:done[i]?'2px solid #4ADE80':i===qIdx?'2px solid #F5A623':'2px solid rgba(255,255,255,0.12)',
-            color:done[i]?'#1a1030':i===qIdx?'#F5A623':'rgba(255,255,255,0.4)',
-          }}>{done[i]?'✓':i+1}</div>
+          <div key={i} style={S.badge(done[i],i===qIdx)}>
+            {done[i]?'✓':i+1}
+          </div>
         ))}
       </div>
-      <div style={{background:'rgba(245,166,35,0.1)',border:'1.5px solid rgba(245,166,35,0.3)',borderRadius:14,padding:'10px 14px',
-        fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'clamp(0.88rem,2vw,1rem)',color:'white',textAlign:'center',lineHeight:1.45}}>
-        🧱 {q.q}
+      {/* Question box */}
+      <div style={S.qBox()}>
+        {q.q}
       </div>
-      <MiniBarBuilder key={qIdx} dataset={getDS(q.dsIdx)} onAllMatch={handleMatch} />
-      {allDone&&(
-        <div style={{textAlign:'center',fontFamily:'"Baloo 2"',fontWeight:800,color:'#4ADE80',fontSize:'1rem'}}>
-          🎉 All 3 challenges complete! Move to the next station →
+      {/* Bar builder */}
+      <MiniBarBuilder key={qIdx} dataset={DS[q.dsIdx]} onAllMatch={handleMatch} />
+      {allDone && (
+        <div style={{fontFamily:'"Baloo 2"',fontWeight:900,color:'#4ADE80',fontSize:'1.05rem',textAlign:'center',marginTop:4}}>
+          🎉 All 3 Bar Builder challenges complete!
         </div>
       )}
     </div>
   )
 }
 
-// ── Station B Component (3 questions, Scale Slider) ─────────────────────────
+/* ─── Station B — Scale Slider ────────────────────────────────────────────── */
 const SCALE_OPTIONS = [1,2,5,10]
+const SCALE_Qs = [
+  { q:'📏 Q1: Move the slider to Scale = 2. How many units does the DOGS bar show?', ans:'9', hint:'The data never changes — Dogs = 9 at any scale!', dsIdx:0 },
+  { q:'📏 Q2: Set Scale to 5. How many gridlines does the GREEN bar (value=10) cross?', ans:'2', hint:'Gridlines at 0, 5, 10 → Green bar crosses 2 gridlines.', dsIdx:1 },
+  { q:'📏 Q3: Set Scale to 1. Which day bar is the TALLEST, and what is its value? (write e.g. Wed, 9)', ans:'wed, 9', hint:'At scale=1 every unit is visible — find the tallest bar!', dsIdx:2 },
+]
+
 function StationB({ onComplete }) {
   const [qIdx, setQIdx] = useState(0)
-  const [answers, setAnswers] = useState(['','',''])
-  const [results, setResults] = useState([null,null,null])
   const [scaleIdx, setScaleIdx] = useState(0)
+  const [inp, setInp] = useState('')
+  const [results, setResults] = useState([null,null,null])
   const allDone = results.every(r=>r===true)
   const q = SCALE_Qs[qIdx]
   const scale = SCALE_OPTIONS[scaleIdx]
-  const ds = getDS(q.dsIdx)
+  const data = DS[q.dsIdx]
 
   React.useEffect(()=>{ if(allDone) onComplete() },[allDone])
 
   const handleCheck = () => {
-    const correct = answers[qIdx].trim().toLowerCase() === q.answer.toLowerCase()
-    setResults(prev=>{ const n=[...prev]; n[qIdx]=correct; return n })
-    if(correct) setTimeout(()=>{ if(qIdx<SCALE_Qs.length-1) setQIdx(i=>i+1); setScaleIdx(0) },900)
+    if (results[qIdx]===true) return
+    const ok = inp.trim().toLowerCase() === q.ans.toLowerCase()
+    const nr=[...results]; nr[qIdx]=ok; setResults(nr)
+    if(ok) setTimeout(()=>{ if(qIdx<SCALE_Qs.length-1){setQIdx(qIdx+1);setInp('');setScaleIdx(0)} }, 900)
   }
 
   return (
-    <div style={{display:'flex',flexDirection:'column',gap:10,width:'100%',maxWidth:480,alignItems:'center'}}>
-      <div style={{display:'flex',gap:5,justifyContent:'center'}}>
-        {SCALE_Qs.map((_,i)=>(
-          <div key={i} style={{width:28,height:28,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',
-            fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.75rem',
-            background:results[i]===true?'#4ADE80':i===qIdx?'rgba(245,166,35,0.3)':'rgba(255,255,255,0.08)',
-            border:results[i]===true?'2px solid #4ADE80':i===qIdx?'2px solid #F5A623':'2px solid rgba(255,255,255,0.12)',
-            color:results[i]===true?'#1a1030':i===qIdx?'#F5A623':'rgba(255,255,255,0.4)',
-          }}>{results[i]===true?'✓':i+1}</div>
-        ))}
+    <div style={{display:'flex',flexDirection:'column',gap:8,width:'100%',alignItems:'center'}}>
+      <div style={{display:'flex',gap:7,justifyContent:'center'}}>
+        {SCALE_Qs.map((_,i)=>(<div key={i} style={S.badge(results[i]===true,i===qIdx)}>{results[i]===true?'✓':i+1}</div>))}
       </div>
-      <div style={{background:'rgba(96,165,250,0.12)',border:'1.5px solid rgba(96,165,250,0.3)',borderRadius:14,padding:'10px 14px',
-        fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'clamp(0.88rem,2vw,1rem)',color:'white',textAlign:'center',width:'100%'}}>
-        📏 {q.q}
-      </div>
-      {/* Scale buttons */}
-      <div style={{display:'flex',gap:6}}>
+      <div style={S.qBox('rgba(96,165,250,0.12)','rgba(96,165,250,0.4)')}>{q.q}</div>
+      {/* Scale selector */}
+      <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap',justifyContent:'center'}}>
+        <span style={{fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.88rem',color:'rgba(255,255,255,0.7)'}}>Scale:</span>
         {SCALE_OPTIONS.map((s,i)=>(
           <button key={s} onClick={()=>setScaleIdx(i)} style={{
-            background:scaleIdx===i?'linear-gradient(135deg,#F5A623,#FFC94A)':'rgba(255,255,255,0.08)',
+            background:scaleIdx===i?'linear-gradient(135deg,#F5A623,#FFC94A)':'rgba(255,255,255,0.09)',
             border:`2px solid ${scaleIdx===i?'#F5A623':'rgba(255,255,255,0.15)'}`,
-            borderRadius:10,padding:'5px 12px',fontFamily:'"Baloo 2"',fontWeight:800,
-            color:scaleIdx===i?'#1a1030':'white',cursor:'pointer',fontSize:'0.9rem',
+            borderRadius:10,padding:'5px 14px',fontFamily:'"Baloo 2"',fontWeight:900,
+            color:scaleIdx===i?'#1a1030':'white',cursor:'pointer',fontSize:'0.95rem',
           }}>{s}</button>
         ))}
       </div>
-      <BarGraph orientation="vertical" categories={ds} scale={scale}
-        maxValue={Math.ceil(Math.max(...ds.map(d=>d.value))/scale)*scale+scale}
-        animated={false} showValues={true} compact={true} />
-      <div style={{fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.78rem',color:'#FFC94A',
-        background:'rgba(245,166,35,0.1)',border:'1px solid rgba(245,166,35,0.2)',borderRadius:10,padding:'5px 14px'}}>
-        Scale = {scale} — each gridline = {scale} unit{scale>1?'s':''}
+      {/* Bar graph */}
+      <div style={{background:'rgba(0,0,0,0.3)',borderRadius:14,padding:'8px 12px',display:'inline-block'}}>
+        <MiniBarGraph data={data} orientation='vertical' />
       </div>
-      {results[qIdx]===false&&(
-        <div style={{color:'#E85D8C',fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.85rem',textAlign:'center'}}>
-          Not quite! Hint: {q.hint}
+      <div style={{fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.85rem',color:'#FFC94A',
+        background:'rgba(245,166,35,0.1)',border:'1px solid rgba(245,166,35,0.25)',
+        borderRadius:10,padding:'5px 16px',textAlign:'center'}}>
+        Scale = <strong style={{fontSize:'1.05rem'}}>{scale}</strong> — each gridline = <strong>{scale}</strong> unit{scale>1?'s':''}
+      </div>
+      {results[qIdx]===false && (
+        <div style={{fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.88rem',color:'#E85D8C',textAlign:'center'}}>
+          Not quite! 💡 Hint: {q.hint}
         </div>
       )}
-      {!results[qIdx] && (
-        <div style={{display:'flex',gap:8,alignItems:'center',width:'100%',maxWidth:280}}>
-          <input value={answers[qIdx]} onChange={e=>setAnswers(prev=>{const n=[...prev];n[qIdx]=e.target.value;return n})}
-            placeholder="Your answer..." onKeyDown={e=>e.key==='Enter'&&handleCheck()}
-            style={{flex:1,background:'rgba(255,255,255,0.1)',border:'2px solid rgba(255,255,255,0.2)',borderRadius:10,
-              padding:'8px 12px',color:'white',fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'1rem',outline:'none'}} />
-          <button onClick={handleCheck} style={{background:'linear-gradient(135deg,#F5A623,#FFC94A)',border:'none',
-            borderRadius:10,padding:'8px 16px',fontFamily:'"Baloo 2"',fontWeight:800,color:'#1a1030',cursor:'pointer'}}>
-            Check ✓
-          </button>
+      {results[qIdx]!==true && (
+        <div style={{display:'flex',gap:8,width:'100%',maxWidth:320}}>
+          <input value={inp} onChange={e=>setInp(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&handleCheck()}
+            placeholder='Type your answer…' style={S.input}/>
+          <button onClick={handleCheck} style={S.checkBtn}>Check ✓</button>
         </div>
       )}
-      {allDone&&<div style={{textAlign:'center',fontFamily:'"Baloo 2"',fontWeight:800,color:'#4ADE80',fontSize:'1rem'}}>🎉 All 3 done! Next station →</div>}
+      {allDone && <div style={{fontFamily:'"Baloo 2"',fontWeight:900,color:'#4ADE80',fontSize:'1.05rem',textAlign:'center'}}>🎉 Scale Slider mastered!</div>}
     </div>
   )
 }
 
-// ── Station C Component (3 questions, Orientation Flip) ─────────────────────
+/* ─── Station C — Orientation Flip ───────────────────────────────────────── */
+const ORIENT_Qs = [
+  { q:'🔄 Q1: Flip to HORIZONTAL view. Which animal now has the LONGEST bar? Type its name.', ans:'dogs', hint:'Dogs = 9 — the longest bar in any orientation!', dsIdx:0 },
+  { q:'🔄 Q2: Switch to VERTICAL view. Which colour bar is the SHORTEST?', ans:'yellow', hint:'Yellow = 3 — the lowest bar in the graph.', dsIdx:1 },
+  { q:'🔄 Q3: Flip between vertical and horizontal. Does the DATA (the numbers) change? Type Yes or No.', ans:'no', hint:'Orientation only changes the look — never the data!', dsIdx:2 },
+]
+
 function StationC({ onComplete }) {
   const [qIdx, setQIdx] = useState(0)
   const [orient, setOrient] = useState('vertical')
-  const [answers, setAnswers] = useState(['','',''])
+  const [inp, setInp] = useState('')
   const [results, setResults] = useState([null,null,null])
   const allDone = results.every(r=>r===true)
   const q = ORIENT_Qs[qIdx]
-  const ds = getDS(q.dsIdx)
+  const data = DS[q.dsIdx]
 
   React.useEffect(()=>{ if(allDone) onComplete() },[allDone])
 
   const handleCheck = () => {
-    const correct = answers[qIdx].trim().toLowerCase() === q.answer.toLowerCase()
-    setResults(prev=>{ const n=[...prev]; n[qIdx]=correct; return n })
-    if(correct) setTimeout(()=>{ if(qIdx<ORIENT_Qs.length-1){setQIdx(i=>i+1);setOrient('vertical')} },900)
+    if (results[qIdx]===true) return
+    const ok = inp.trim().toLowerCase() === q.ans.toLowerCase()
+    const nr=[...results]; nr[qIdx]=ok; setResults(nr)
+    if(ok) setTimeout(()=>{ if(qIdx<ORIENT_Qs.length-1){setQIdx(qIdx+1);setInp('');setOrient('vertical')} }, 900)
   }
 
   return (
-    <div style={{display:'flex',flexDirection:'column',gap:10,width:'100%',maxWidth:480,alignItems:'center'}}>
-      <div style={{display:'flex',gap:5,justifyContent:'center'}}>
-        {ORIENT_Qs.map((_,i)=>(
-          <div key={i} style={{width:28,height:28,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',
-            fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.75rem',
-            background:results[i]===true?'#4ADE80':i===qIdx?'rgba(245,166,35,0.3)':'rgba(255,255,255,0.08)',
-            border:results[i]===true?'2px solid #4ADE80':i===qIdx?'2px solid #F5A623':'2px solid rgba(255,255,255,0.12)',
-            color:results[i]===true?'#1a1030':i===qIdx?'#F5A623':'rgba(255,255,255,0.4)',
-          }}>{results[i]===true?'✓':i+1}</div>
-        ))}
+    <div style={{display:'flex',flexDirection:'column',gap:8,width:'100%',alignItems:'center'}}>
+      <div style={{display:'flex',gap:7,justifyContent:'center'}}>
+        {ORIENT_Qs.map((_,i)=>(<div key={i} style={S.badge(results[i]===true,i===qIdx)}>{results[i]===true?'✓':i+1}</div>))}
       </div>
-      <div style={{background:'rgba(168,85,247,0.12)',border:'1.5px solid rgba(168,85,247,0.3)',borderRadius:14,padding:'10px 14px',
-        fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'clamp(0.88rem,2vw,1rem)',color:'white',textAlign:'center',width:'100%'}}>
-        🔄 {q.q}
-      </div>
+      <div style={S.qBox('rgba(168,85,247,0.12)','rgba(168,85,247,0.4)')}>{q.q}</div>
       {/* Toggle */}
-      <div style={{display:'flex',alignItems:'center',gap:10,background:'rgba(255,255,255,0.06)',borderRadius:50,padding:'6px 12px',border:'1px solid rgba(255,255,255,0.1)'}}>
-        <span style={{fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.85rem',color:orient==='vertical'?'#F5A623':'rgba(255,255,255,0.4)'}}>📊 Vertical</span>
+      <div style={{display:'flex',alignItems:'center',gap:10,background:'rgba(255,255,255,0.07)',
+        borderRadius:50,padding:'7px 14px',border:'1px solid rgba(255,255,255,0.12)'}}>
+        <span style={{fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.88rem',
+          color:orient==='vertical'?'#F5A623':'rgba(255,255,255,0.4)'}}>📊 Vertical</span>
         <button onClick={()=>setOrient(o=>o==='vertical'?'horizontal':'vertical')} style={{
-          width:48,height:26,borderRadius:50,background:orient==='horizontal'?'linear-gradient(135deg,#F5A623,#FFC94A)':'rgba(255,255,255,0.15)',
-          border:'none',cursor:'pointer',position:'relative',transition:'all 0.3s'}}>
-          <motion.div animate={{x:orient==='horizontal'?22:2}} style={{width:20,height:20,borderRadius:'50%',background:'white',position:'absolute',top:3,boxShadow:'0 2px 6px rgba(0,0,0,0.3)'}}/>
+          width:50,height:27,borderRadius:50,cursor:'pointer',border:'none',position:'relative',
+          background:orient==='horizontal'?'linear-gradient(135deg,#F5A623,#FFC94A)':'rgba(255,255,255,0.18)',
+          transition:'all 0.3s'}}>
+          <motion.div animate={{x:orient==='horizontal'?23:2}}
+            style={{width:21,height:21,borderRadius:'50%',background:'white',position:'absolute',top:3,
+            boxShadow:'0 2px 6px rgba(0,0,0,0.3)'}}/>
         </button>
-        <span style={{fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.85rem',color:orient==='horizontal'?'#F5A623':'rgba(255,255,255,0.4)'}}>📊 Horizontal</span>
+        <span style={{fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.88rem',
+          color:orient==='horizontal'?'#F5A623':'rgba(255,255,255,0.4)'}}>📊 Horizontal</span>
       </div>
-      <BarGraph orientation={orient} categories={ds} scale={1}
-        maxValue={Math.max(...ds.map(d=>d.value))+2} animated={true} showValues={true} compact={true} />
-      {results[qIdx]===false&&(
-        <div style={{color:'#E85D8C',fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.85rem',textAlign:'center'}}>Not quite! Hint: {q.hint}</div>
-      )}
-      {!results[qIdx] && (
-        <div style={{display:'flex',gap:8,alignItems:'center',width:'100%',maxWidth:280}}>
-          <input value={answers[qIdx]} onChange={e=>setAnswers(prev=>{const n=[...prev];n[qIdx]=e.target.value;return n})}
-            placeholder="Your answer..." onKeyDown={e=>e.key==='Enter'&&handleCheck()}
-            style={{flex:1,background:'rgba(255,255,255,0.1)',border:'2px solid rgba(255,255,255,0.2)',borderRadius:10,
-              padding:'8px 12px',color:'white',fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'1rem',outline:'none'}} />
-          <button onClick={handleCheck} style={{background:'linear-gradient(135deg,#F5A623,#FFC94A)',border:'none',
-            borderRadius:10,padding:'8px 16px',fontFamily:'"Baloo 2"',fontWeight:800,color:'#1a1030',cursor:'pointer'}}>Check ✓</button>
+      <div style={{background:'rgba(0,0,0,0.3)',borderRadius:14,padding:'8px 12px',display:'inline-block'}}>
+        <MiniBarGraph data={data} orientation={orient} />
+      </div>
+      {results[qIdx]===false && (
+        <div style={{fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.88rem',color:'#E85D8C',textAlign:'center'}}>
+          Not quite! 💡 {q.hint}
         </div>
       )}
-      {allDone&&<div style={{textAlign:'center',fontFamily:'"Baloo 2"',fontWeight:800,color:'#4ADE80',fontSize:'1rem'}}>🎉 All 3 done! Next station →</div>}
+      {results[qIdx]!==true && (
+        <div style={{display:'flex',gap:8,width:'100%',maxWidth:320}}>
+          <input value={inp} onChange={e=>setInp(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&handleCheck()}
+            placeholder='Type your answer…' style={S.input}/>
+          <button onClick={handleCheck} style={S.checkBtn}>Check ✓</button>
+        </div>
+      )}
+      {allDone && <div style={{fontFamily:'"Baloo 2"',fontWeight:900,color:'#4ADE80',fontSize:'1.05rem',textAlign:'center'}}>🎉 Orientation Flip mastered!</div>}
     </div>
   )
 }
 
-// ── Station D Component (3 questions, Spot the Error) ───────────────────────
+/* ─── Station D — Spot the Error ─────────────────────────────────────────── */
+const ERR = [
+  { title:'Pet Shop', correct:[{l:'Cats',v:6,c:'#FF6B6B'},{l:'Dogs',v:9,c:'#FFD93D'},{l:'Birds',v:4,c:'#6BCB77'}],
+    bad:[{l:'Cats',v:3,c:'#FF6B6B'},{l:'Dogs',v:9,c:'#FFD93D'},{l:'Birds',v:4,c:'#6BCB77'}], ei:0,
+    q:'🔎 Error 1 — Pet Shop: Cats were sold 6 times but the graph shows the wrong amount. Tap the wrong bar!',
+    exp:'The Cats bar shows 3, but 6 cats were sold. The bar should be twice as tall!' },
+  { title:'Colour Votes', correct:[{l:'Red',v:8,c:'#FF6B6B'},{l:'Blue',v:5,c:'#4D96FF'},{l:'Green',v:10,c:'#6BCB77'}],
+    bad:[{l:'Red',v:8,c:'#FF6B6B'},{l:'Blue',v:5,c:'#4D96FF'},{l:'Green',v:5,c:'#6BCB77'}], ei:2,
+    q:'🔎 Error 2 — Colour Votes: Green got 10 votes but the graph is wrong. Find and tap the incorrect bar!',
+    exp:'Green should show 10, not 5. The bar was drawn only half as tall as it should be!' },
+  { title:'Sunny Days', correct:[{l:'Mon',v:7,c:'#C77DFF'},{l:'Tue',v:4,c:'#FF9F43'},{l:'Wed',v:9,c:'#00D2FF'}],
+    bad:[{l:'Mon',v:7,c:'#C77DFF'},{l:'Tue',v:9,c:'#FF9F43'},{l:'Wed',v:9,c:'#00D2FF'}], ei:1,
+    q:'🔎 Error 3 — Sunny Days: Tuesday had 4 sunny hours but the bar shows more. Which bar is wrong? Tap it!',
+    exp:'Tuesday shows 9 hours, but it should show only 4. Someone drew the bar too tall!' },
+]
+
 function StationD({ onComplete }) {
   const [qIdx, setQIdx] = useState(0)
-  const [selected, setSelected] = useState(null)
-  const [revealed, setRevealed] = useState(false)
+  const [sel, setSel] = useState(null)
+  const [rev, setRev] = useState(false)
   const [done, setDone] = useState([false,false,false])
   const allDone = done.every(Boolean)
-  const sc = ERROR_SCENARIOS[qIdx]
+  const sc = ERR[qIdx]
+  const cats = sc.bad
+  const maxV = Math.max(...cats.map(c=>c.v),...sc.correct.map(c=>c.v))+2
+  const BH = 100
 
   React.useEffect(()=>{ if(allDone) onComplete() },[allDone])
 
-  const handleBarClick = (idx) => {
-    if (revealed) return
-    setSelected(idx)
-    if (idx === sc.errorIdx) {
-      setRevealed(true)
-      setDone(prev=>{ const n=[...prev]; n[qIdx]=true; return n })
+  const handleClick = (idx) => {
+    if (rev) return
+    setSel(idx)
+    if (idx===sc.ei) {
+      setRev(true)
+      const nd=[...done]; nd[qIdx]=true; setDone(nd)
       setTimeout(()=>{
-        if(qIdx<ERROR_SCENARIOS.length-1){setQIdx(i=>i+1);setSelected(null);setRevealed(false)}
-      },1600)
+        if(qIdx<ERR.length-1){setQIdx(qIdx+1);setSel(null);setRev(false)}
+      },2000)
     }
   }
 
-  const cats = sc.corrupted
-  const maxV = Math.max(...cats.map(c=>c.value),...sc.correct.map(c=>c.value))+2
-  const gH = 110
-
   return (
-    <div style={{display:'flex',flexDirection:'column',gap:10,width:'100%',maxWidth:460,alignItems:'center'}}>
-      <div style={{display:'flex',gap:5,justifyContent:'center'}}>
-        {ERROR_SCENARIOS.map((_,i)=>(
-          <div key={i} style={{width:28,height:28,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',
-            fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.75rem',
-            background:done[i]?'#4ADE80':i===qIdx?'rgba(232,93,140,0.3)':'rgba(255,255,255,0.08)',
-            border:done[i]?'2px solid #4ADE80':i===qIdx?'2px solid #E85D8C':'2px solid rgba(255,255,255,0.12)',
-            color:done[i]?'#1a1030':i===qIdx?'#E85D8C':'rgba(255,255,255,0.4)',
-          }}>{done[i]?'✓':i+1}</div>
-        ))}
+    <div style={{display:'flex',flexDirection:'column',gap:8,width:'100%',alignItems:'center'}}>
+      <div style={{display:'flex',gap:7,justifyContent:'center'}}>
+        {ERR.map((_,i)=>(<div key={i} style={S.badge(done[i],i===qIdx)}>{done[i]?'✓':i+1}</div>))}
       </div>
-      <div style={{background:'rgba(232,93,140,0.1)',border:'1.5px solid rgba(232,93,140,0.3)',borderRadius:14,padding:'10px 14px',
-        fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'clamp(0.88rem,2vw,1rem)',color:'white',textAlign:'center',width:'100%'}}>
-        🔎 {sc.q}
-      </div>
-      {/* Clickable bars */}
-      <div style={{display:'flex',gap:14,alignItems:'flex-end',background:'rgba(0,0,0,0.3)',borderRadius:14,padding:'12px 18px'}}>
+      <div style={S.qBox('rgba(232,93,140,0.1)','rgba(232,93,140,0.35)')}>{sc.q}</div>
+      {/* Clickable bar chart */}
+      <div style={{background:'rgba(0,0,0,0.35)',borderRadius:14,padding:'12px 20px',
+        display:'flex',gap:18,alignItems:'flex-end'}}>
         {cats.map((cat,i)=>{
-          const bh = Math.max(4,(cat.value/maxV)*gH)
-          const isWrong = i===sc.errorIdx
-          const isSel = selected===i
-          let bg = `linear-gradient(to top,${cat.color}cc,${cat.color})`
-          if(revealed&&isWrong) bg='linear-gradient(to top,rgba(232,93,140,0.9),#E85D8C)'
+          const bh = Math.max(4,(cat.v/maxV)*BH)
+          const isWrong = i===sc.ei
+          const isSel = sel===i
+          const col = rev&&isWrong ? '#E85D8C' : cat.c
           return (
-            <div key={cat.label} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
-              <button onClick={()=>handleBarClick(i)} style={{
-                height:bh,width:42,background:bg,
-                border:revealed&&isWrong?'2px solid #E85D8C':isSel&&!revealed?'2px solid rgba(255,255,255,0.6)':'2px solid transparent',
-                borderRadius:'4px 4px 0 0',cursor:revealed?'default':'pointer',
-                transition:'all 0.3s',boxShadow:revealed&&isWrong?'0 0 14px #E85D8C':'none',
+            <div key={cat.l} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+              <span style={{fontFamily:'"Baloo 2"',fontWeight:900,fontSize:'0.88rem',color:'white'}}>{cat.v}</span>
+              <button onClick={()=>handleClick(i)} style={{
+                width:46,height:bh,background:`linear-gradient(to top,${col}cc,${col})`,
+                border:rev&&isWrong?'2px solid #E85D8C':isSel&&!rev?'2px solid white':'2px solid transparent',
+                borderRadius:'4px 4px 0 0',cursor:rev?'default':'pointer',
+                transition:'all 0.3s',boxShadow:rev&&isWrong?`0 0 16px ${col}`:'none',
               }}/>
-              <span style={{fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.72rem',color:'rgba(255,255,255,0.7)'}}>{cat.label}</span>
-              <span style={{fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.85rem',color:'white'}}>{cat.value}</span>
-              {revealed&&isWrong&&<motion.span initial={{scale:0}} animate={{scale:1}} style={{fontSize:'0.9rem'}}>❌</motion.span>}
+              <span style={{fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.8rem',color:'rgba(255,255,255,0.8)'}}>{cat.l}</span>
+              {rev&&isWrong&&<motion.span initial={{scale:0}} animate={{scale:1}} style={{fontSize:'1rem'}}>❌</motion.span>}
             </div>
           )
         })}
       </div>
-      {selected!==null&&!revealed&&(
-        <div style={{color:'rgba(255,255,255,0.6)',fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.85rem',textAlign:'center'}}>
-          That looks okay — keep looking! 🔍
+      {sel!==null && !rev && (
+        <div style={{fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.88rem',
+          color:'rgba(255,255,255,0.6)',textAlign:'center'}}>
+          That bar looks okay — keep looking! 🔍
         </div>
       )}
-      {revealed&&(
+      {rev && (
         <motion.div initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} style={{
-          background:'rgba(74,222,128,0.12)',border:'2px solid rgba(74,222,128,0.4)',borderRadius:14,
-          padding:'10px 16px',fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.88rem',color:'white',textAlign:'center'}}>
-          ✅ Found it! {sc.explanation}
+          background:'rgba(74,222,128,0.12)',border:'2px solid rgba(74,222,128,0.45)',
+          borderRadius:14,padding:'10px 16px',fontFamily:'"Baloo 2"',fontWeight:800,
+          fontSize:'0.92rem',color:'white',textAlign:'center',lineHeight:1.45}}>
+          ✅ Found it! {sc.exp}
         </motion.div>
       )}
-      {allDone&&<div style={{textAlign:'center',fontFamily:'"Baloo 2"',fontWeight:800,color:'#4ADE80',fontSize:'1rem'}}>🎉 All errors found! You can now go to Play! 🎮</div>}
+      {allDone && <div style={{fontFamily:'"Baloo 2"',fontWeight:900,color:'#4ADE80',fontSize:'1.05rem',textAlign:'center'}}>🎉 All errors spotted! You can now Play! 🎮</div>}
     </div>
   )
 }
 
-// ── Main Simulate Page ───────────────────────────────────────────────────────
+/* ─── Main Simulate Page ──────────────────────────────────────────────────── */
 const TABS = [
-  { id:'builder',     icon:'🧱', label:'Bar Builder',      station:'A' },
-  { id:'scale',       icon:'📏', label:'Scale Slider',     station:'B' },
-  { id:'orientation', icon:'🔄', label:'Orientation Flip', station:'C' },
-  { id:'error',       icon:'🔎', label:'Spot the Error',   station:'D' },
+  { id:'builder',     icon:'🧱', label:'A — Bar Builder',      color:'#F5A623' },
+  { id:'scale',       icon:'📏', label:'B — Scale Slider',     color:'#60A5FA' },
+  { id:'orientation', icon:'🔄', label:'C — Orientation Flip', color:'#A78BFA' },
+  { id:'error',       icon:'🔎', label:'D — Spot the Error',   color:'#E85D8C' },
 ]
+const NARR = {
+  builder: ['sim_barbuilder'],
+  scale: ['sim_scale'],
+  orientation: ['sim_orient'],
+  error: ['sim_error'],
+}
 
 export default function Simulate() {
   const navigate = useNavigate()
   const { speak, stopAll } = useAudio()
   const { dispatch } = useProgress()
   const [activeTab, setActiveTab] = useState('builder')
-  // Track which stations are completed
-  const [stationsDone, setStationsDone] = useState({ builder:false, scale:false, orientation:false, error:false })
-  const allDone = Object.values(stationsDone).every(Boolean)
+  const [done, setDone] = useState({ builder:false, scale:false, orientation:false, error:false })
+  const allDone = Object.values(done).every(Boolean)
 
-  const markDone = (tab) => setStationsDone(prev=>({...prev,[tab]:true}))
+  // Station locking: can only access a tab if all previous tabs are done
+  const tabOrder = ['builder','scale','orientation','error']
+  const isUnlocked = (id) => {
+    const idx = tabOrder.indexOf(id)
+    if (idx===0) return true
+    return done[tabOrder[idx-1]]
+  }
 
   React.useEffect(()=>{
-    speak(narrationScripts.simulate.welcome)
+    speak(['/assets/audio/sim_welcome.mp3'])
     return ()=>stopAll()
   },[])
 
-  const handleTabChange = (tabId) => {
-    stopAll(); setActiveTab(tabId)
-    const scripts = {
-      builder: narrationScripts.simulate.barBuilder,
-      scale: narrationScripts.simulate.scaleSlider,
-      orientation: narrationScripts.simulate.orientation,
-      error: narrationScripts.simulate.spotError,
-    }
-    if (scripts[tabId]) speak(scripts[tabId])
+  const handleTabClick = (id) => {
+    if (!isUnlocked(id)) return
+    stopAll()
+    setActiveTab(id)
+    const key = NARR[id]?.[0]
+    if (key) speak([`/assets/audio/${key}.mp3`])
   }
 
-  const handlePlayNow = () => {
+  const markDone = (id) => {
+    setDone(prev=>({...prev,[id]:true}))
+    // auto-advance to next tab
+    const idx = tabOrder.indexOf(id)
+    if (idx < tabOrder.length-1) {
+      setTimeout(()=>{
+        const next = tabOrder[idx+1]
+        stopAll()
+        setActiveTab(next)
+        const key = NARR[next]?.[0]
+        if (key) speak([`/assets/audio/${key}.mp3`])
+      }, 1200)
+    }
+  }
+
+  const handlePlay = () => {
     stopAll()
-    dispatch({ type: 'COMPLETE_PHASE', phase: 'simulate' })
+    dispatch({ type:'COMPLETE_PHASE', phase:'simulate' })
     navigate('/play')
   }
 
-  const tabIdx = TABS.findIndex(t=>t.id===activeTab)
-
-  const goNext = () => {
-    if (tabIdx < TABS.length-1) handleTabChange(TABS[tabIdx+1].id)
-  }
-  const goPrev = () => {
-    if (tabIdx > 0) handleTabChange(TABS[tabIdx-1].id)
-  }
-
-  const owlMsg = {
-    builder:'Adjust the bars using + and − to match the target values! 🧱',
-    scale:'Move the scale to see how the graph changes — the data stays the same! 📏',
-    orientation:'Toggle vertical/horizontal and see it is the same data! 🔄',
-    error:'Tap the bar that has the wrong height — find the mistake! 🔎',
+  const owlHints = {
+    builder:'Use + and − to match the target bar heights! 🧱',
+    scale:'Change the scale and watch the graph reshape! 📏',
+    orientation:'Toggle to see the same data vertically and horizontally! 🔄',
+    error:'Find the bar that does NOT match the correct value! 🔎',
   }
 
   return (
     <div className="page-frame">
       <PhaseStepper active="simulate" />
-      <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',padding:'8px 12px 6px',gap:6,overflow:'hidden'}}>
+      <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',
+        padding:'8px 14px 6px',gap:6,alignItems:'center'}}>
 
-        {/* Header row */}
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',maxWidth:600,flexShrink:0}}>
+        {/* ── Header ── */}
+        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',
+          width:'100%',maxWidth:640,flexShrink:0,gap:8}}>
           <div>
-            <div style={{fontFamily:'"Baloo 2"',fontWeight:900,fontSize:'clamp(1.1rem,2.5vw,1.4rem)',color:'white'}}>
-              ✏️ Simulate — Explore!
+            <div style={{fontFamily:'"Baloo 2"',fontWeight:900,
+              fontSize:'clamp(1.05rem,2.5vw,1.3rem)',color:'white',lineHeight:1.2}}>
+              ✏️ Simulate — Explore &amp; Discover!
             </div>
-            <div style={{fontFamily:'"Poppins"',fontWeight:600,fontSize:'0.78rem',color:'rgba(255,255,255,0.55)'}}>
-              Complete all 4 stations to unlock Play 🎮
+            <div style={{fontFamily:'"Baloo 2"',fontWeight:700,
+              fontSize:'clamp(0.75rem,1.6vw,0.88rem)',color:'rgba(255,255,255,0.5)',marginTop:2}}>
+              Complete all 4 stations in order to unlock Play 🎮
             </div>
           </div>
-          {/* Owl bubble */}
-          <div style={{display:'flex',alignItems:'center',gap:7,background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:14,borderBottomRightRadius:4,padding:'6px 12px',maxWidth:220}}>
-            <span style={{fontSize:'1.4rem',flexShrink:0}}>🦉</span>
-            <span style={{fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.72rem',color:'#FFC94A',lineHeight:1.35}}>{owlMsg[activeTab]}</span>
+          {/* Owl */}
+          <div style={{display:'flex',alignItems:'center',gap:6,flexShrink:0,
+            background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.13)',
+            borderRadius:14,borderBottomRightRadius:4,padding:'6px 11px',maxWidth:200}}>
+            <span style={{fontSize:'1.3rem',flexShrink:0}}>🦉</span>
+            <span style={{fontFamily:'"Baloo 2"',fontWeight:700,
+              fontSize:'0.7rem',color:'#FFC94A',lineHeight:1.35}}>{owlHints[activeTab]}</span>
           </div>
         </div>
 
-        {/* Tab bar */}
-        <div style={{display:'flex',gap:5,flexShrink:0,width:'100%',maxWidth:600}} className="no-scrollbar">
-          {TABS.map((tab,i)=>(
-            <button key={tab.id} onClick={()=>handleTabChange(tab.id)} style={{
-              flex:1, display:'flex',alignItems:'center',justifyContent:'center',gap:4,
-              padding:'7px 8px', borderRadius:12, border:'none',cursor:'pointer',
-              fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.72rem',
-              whiteSpace:'nowrap',transition:'all 0.2s',
-              background: activeTab===tab.id ? 'linear-gradient(135deg,#F5A623,#FFC94A)' : 'rgba(255,255,255,0.07)',
-              color: activeTab===tab.id ? '#1a1030' : 'rgba(255,255,255,0.65)',
-              boxShadow: activeTab===tab.id ? '0 2px 10px rgba(245,166,35,0.4)' : 'none',
-              position:'relative',
-            }}>
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
-              {stationsDone[tab.id]&&(
-                <span style={{position:'absolute',top:2,right:4,fontSize:'0.6rem',color:activeTab===tab.id?'#1a1030':'#4ADE80'}}>✓</span>
-              )}
-            </button>
-          ))}
+        {/* ── Tab bar ── */}
+        <div style={{display:'flex',gap:5,flexShrink:0,width:'100%',maxWidth:640}}>
+          {TABS.map((tab,i)=>{
+            const unlocked = isUnlocked(tab.id)
+            const isDone = done[tab.id]
+            const isActive = activeTab===tab.id
+            return (
+              <button key={tab.id}
+                onClick={()=>handleTabClick(tab.id)}
+                disabled={!unlocked}
+                title={!unlocked?`Complete station ${String.fromCharCode(64+i)} first`:undefined}
+                style={{
+                  flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:4,
+                  padding:'7px 6px',borderRadius:11,border:'none',
+                  cursor:unlocked?'pointer':'not-allowed',
+                  fontFamily:'"Baloo 2"',fontWeight:800,fontSize:'0.7rem',
+                  whiteSpace:'nowrap',transition:'all 0.2s',position:'relative',
+                  background: isActive
+                    ? `linear-gradient(135deg,${tab.color},${tab.color}cc)`
+                    : isDone ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.06)',
+                  color: isActive ? '#1a1030' : isDone ? '#4ADE80' : unlocked ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.25)',
+                  opacity: !unlocked ? 0.45 : 1,
+                  boxShadow: isActive ? `0 2px 12px ${tab.color}66` : 'none',
+                }}>
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+                {isDone && <span style={{fontSize:'0.6rem',marginLeft:2}}>{isActive?'':'✓'}</span>}
+                {!unlocked && <span style={{fontSize:'0.7rem',position:'absolute',top:2,right:4}}>🔒</span>}
+              </button>
+            )
+          })}
         </div>
 
-        {/* Content panel */}
+        {/* ── Content area ── */}
         <div style={{
-          flex:1,width:'100%',maxWidth:600,
+          flex:1,width:'100%',maxWidth:640,
           background:'rgba(255,255,255,0.04)',
           border:'1px solid rgba(255,255,255,0.09)',
-          borderRadius:20,padding:'12px 14px',
-          overflow:'hidden',display:'flex',flexDirection:'column',
-          position:'relative',
-        }}>
+          borderRadius:18,padding:'12px 14px',
+          overflow:'auto',display:'flex',
+          flexDirection:'column',alignItems:'center',
+        }} className="no-scrollbar">
           <AnimatePresence mode="wait">
-            <motion.div key={activeTab} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-10}} transition={{duration:0.22}}
-              style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',gap:8}}>
-              {activeTab==='builder'    && <StationA onComplete={()=>markDone('builder')} />}
-              {activeTab==='scale'      && <StationB onComplete={()=>markDone('scale')} />}
-              {activeTab==='orientation'&& <StationC onComplete={()=>markDone('orientation')} />}
-              {activeTab==='error'      && <StationD onComplete={()=>markDone('error')} />}
+            <motion.div key={activeTab}
+              initial={{opacity:0,y:10}} animate={{opacity:1,y:0}}
+              exit={{opacity:0,y:-10}} transition={{duration:0.2}}
+              style={{width:'100%',display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+              {activeTab==='builder'     && <StationA onComplete={()=>markDone('builder')} />}
+              {activeTab==='scale'       && <StationB onComplete={()=>markDone('scale')} />}
+              {activeTab==='orientation' && <StationC onComplete={()=>markDone('orientation')} />}
+              {activeTab==='error'       && <StationD onComplete={()=>markDone('error')} />}
             </motion.div>
           </AnimatePresence>
         </div>
 
-        {/* Navigation row */}
+        {/* ── Footer nav ── */}
         <div style={{display:'flex',gap:8,flexShrink:0,alignItems:'center',justifyContent:'center'}}>
-          {tabIdx>0&&(
-            <button onClick={goPrev} style={{background:'rgba(255,255,255,0.08)',border:'2px solid rgba(255,255,255,0.15)',
-              borderRadius:50,padding:'8px 18px',fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.88rem',color:'white',cursor:'pointer'}}>
-              ← Prev
-            </button>
-          )}
-          {tabIdx<TABS.length-1&&(
-            <button onClick={goNext} style={{background:'rgba(255,255,255,0.08)',border:'2px solid rgba(255,255,255,0.2)',
-              borderRadius:50,padding:'8px 18px',fontFamily:'"Baloo 2"',fontWeight:700,fontSize:'0.88rem',color:'white',cursor:'pointer'}}>
-              Next →
-            </button>
-          )}
-          {/* Play button ONLY after all stations done */}
-          {allDone&&(
-            <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.97}} onClick={handlePlayNow}
-              style={{background:'linear-gradient(135deg,#F5A623,#FFC94A)',border:'none',borderRadius:50,
-                padding:'10px 26px',fontFamily:'"Baloo 2"',fontWeight:900,fontSize:'1rem',color:'#1a1030',
-                cursor:'pointer',boxShadow:'0 4px 18px rgba(245,166,35,0.5)'}}>
-              🎮 Play Now! →
+          {allDone && (
+            <motion.button whileHover={{scale:1.05}} whileTap={{scale:0.97}} onClick={handlePlay}
+              style={{background:'linear-gradient(135deg,#F5A623,#FFC94A)',border:'none',
+                borderRadius:50,padding:'11px 30px',fontFamily:'"Baloo 2"',fontWeight:900,
+                fontSize:'clamp(0.95rem,2vw,1.1rem)',color:'#1a1030',cursor:'pointer',
+                boxShadow:'0 4px 20px rgba(245,166,35,0.55)'}}>
+              🎮 Let's Play! →
             </motion.button>
+          )}
+          {!allDone && (
+            <div style={{fontFamily:'"Baloo 2"',fontWeight:700,
+              fontSize:'0.82rem',color:'rgba(255,255,255,0.38)',textAlign:'center'}}>
+              🔒 Complete all 4 stations to unlock Play
+            </div>
           )}
         </div>
       </div>

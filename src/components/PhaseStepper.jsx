@@ -20,13 +20,13 @@ export default function PhaseStepper({ active, showHome = true }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '8px 12px 6px',
+      padding: '7px 12px 5px',
       gap: '0',
-      background: 'rgba(0,0,0,0.45)',
-      borderBottom: '1px solid rgba(255,255,255,0.1)',
+      background: 'transparent',
+      borderBottom: '1px solid rgba(255,255,255,0.08)',
       flexShrink: 0,
       position: 'relative',
-      minHeight: 52,
+      minHeight: 48,
     }}>
       {/* Home button — shown on all phases except Home itself */}
       {showHome && (

@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import BarGraph from './BarGraph'
 import { useAudio } from '../context/AudioContext'
+import { audioMap } from '../utils/audioMap'
 import { narrationScripts } from '../utils/narration'
 
-export default function QuestionCard({ question, onAnswer, questionNum, total }) {
+export default function QuestionCard({ question, onAnswer, questionNum, total, worldId }) {
   const [selected, setSelected] = useState(null)
   const [showFeedback, setShowFeedback] = useState(false)
   const [feedbackType, setFeedbackType] = useState(null)
@@ -15,11 +16,21 @@ export default function QuestionCard({ question, onAnswer, questionNum, total })
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
   }, [])
 
+  // Narrate the question stem when it appears
   useEffect(() => {
     setSelected(null)
     setShowFeedback(false)
     setFeedbackType(null)
-  }, [question?.id])
+    if (!question) return
+    // Try to find the audio file for this question by stem text
+    const stemUrl = audioMap[question.stem]
+    // Also try by worldId + question index pattern
+    const worldKey = worldId ? `/assets/audio/play_${worldId}_q${questionNum}.mp3` : null
+    const url = stemUrl || worldKey
+    if (url) {
+      setTimeout(() => speak([url]), 200)
+    }
+  }, [question?.id, questionNum])
 
   const handleAnswer = (opt) => {
     if (selected !== null) return
